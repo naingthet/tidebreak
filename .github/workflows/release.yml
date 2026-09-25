@@ -190,442 +190,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  build_docs:
-    name: build release documentation
-    needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    env:
-      BASE_PATH: /docs
-      RELEASE_SHA: ${{ needs.validate.outputs.sha }}
-      RELEASE_TAG: ${{ needs.validate.outputs.tag }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ needs.validate.outputs.sha }}
-          persist-credentials: false
-      - name: Require the validated release source
-        run: |
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || {
-            echo "Documentation checkout does not match the validated release." >&2
-            exit 1
-          }
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10.18.3
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: docs-site/pnpm-lock.yaml
-      - name: Install locked documentation dependencies
-        run: pnpm --dir docs-site install --frozen-lockfile
-      - name: Build and validate the static release documentation
-        run: |
-          pnpm --dir docs-site build
-          pnpm --dir docs-site lint
-          pnpm --dir docs-site types:check
-          pnpm --dir docs-site test:vercel-output
-          test -f docs-site/out/index.html
-          test -f docs-site/out/search-index.json
-          test -f docs-site/out/sitemap.xml
-          pnpm --dir docs-site package:vercel
-          test -f .vercel/output/static/docs/index.html
-          test -f .vercel/output/static/docs/quickstart/index.html
-          test -f .vercel/output/static/docs/search-index.json
-          test -f .vercel/output/static/docs/sitemap.xml
-          (
-            cd .vercel/output
-            find . -type f -print0 \
-              | sort -z \
-              | xargs -0 sha256sum \
-              > "$RUNNER_TEMP/tidebreak-docs-$RELEASE_TAG.sha256"
-          )
-      - name: Transfer inert prebuilt documentation
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: tidebreak-docs-${{ needs.validate.outputs.tag }}-prebuilt
-          path: .vercel/output
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 1
-      - name: Retain the static-content digest manifest
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: tidebreak-docs-${{ needs.validate.outputs.tag }}-manifest
-          path: ${{ runner.temp }}/tidebreak-docs-${{ needs.validate.outputs.tag }}.sha256
-          if-no-files-found: error
-          retention-days: 90
-
-  publish_docs:
-    name: publish release documentation
-    needs: [validate, build_docs, finalize_release]
-    # Platform jobs can be skipped before finalization. Check the direct
-    # prerequisites instead of inheriting the implicit success() condition.
-    if: >-
-      ${{
-        !cancelled()
-        && needs.validate.result == 'success'
-        && needs.build_docs.result == 'success'
-        && needs.finalize_release.result == 'success'
-      }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment:
-      name: docs-production
-      url: https://tidebreak-docs.vercel.app/docs/
-    permissions:
-      contents: read
-    env:
-      RELEASE_SHA: ${{ needs.validate.outputs.sha }}
-      RELEASE_TAG: ${{ needs.validate.outputs.tag }}
-      VERCEL_ORG_ID: team_akhCRtYAsxrr6iIL6g6YGuKY
-      VERCEL_PROJECT_ID: prj_XixuEje56Ofw70MmAqOfj7BUFQw9
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ needs.validate.outputs.sha }}
-          persist-credentials: false
-          sparse-checkout: .github/vercel-cli
-          sparse-checkout-cone-mode: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-      # pnpm/action-setup installs a bootstrap release and then self-updates it.
-      # That step has taken seven minutes on otherwise healthy hosted runners.
-      # Node 22's Corepack installs the exact project pin directly.
-      - name: Enable pinned pnpm
-        run: |
-          corepack enable
-          corepack install --global pnpm@10.18.3
-          node -e 'const bin = process.platform === "win32" ? "pnpm.cmd" : "pnpm"; const version = require("node:child_process").execFileSync(bin, ["--version"], { encoding: "utf8", shell: process.platform === "win32" }).trim(); if (version !== "10.18.3") throw new Error("Expected pnpm 10.18.3, got " + version)'
-      - name: Install the locked deployment client
-        run: pnpm --dir .github/vercel-cli install --frozen-lockfile --ignore-scripts
-      - name: Download the inert prebuilt documentation
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-docs-${{ needs.validate.outputs.tag }}-prebuilt
-          path: .vercel/output
-      - name: Download the documentation digest manifest
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-docs-${{ needs.validate.outputs.tag }}-manifest
-          path: ${{ runner.temp }}/docs-manifest
-      - name: Verify the transferred documentation
-        run: |
-          (
-            cd .vercel/output
-            sha256sum --check --strict \
-              "$RUNNER_TEMP/docs-manifest/tidebreak-docs-$RELEASE_TAG.sha256"
-          )
-      - name: Link the fixed documentation project
-        run: |
-          mkdir -p .vercel
-          jq -n \
-            --arg orgId "$VERCEL_ORG_ID" \
-            --arg projectId "$VERCEL_PROJECT_ID" \
-            '{orgId: $orgId, projectId: $projectId, projectName: "tidebreak-docs"}' \
-            > .vercel/project.json
-      - name: Create an unaliased production deployment
-        id: deploy
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          # Keep the CLI on the project.json team id. Env-based linking
-          # looks up /teams without ?teamId=, which team tokens require.
-          VERCEL_ORG_ID: ""
-          VERCEL_PROJECT_ID: ""
-        run: |
-          [[ -n "$VERCEL_TOKEN" ]] || {
-            echo "The docs-production environment must provide VERCEL_TOKEN." >&2
-            exit 1
-          }
-          # Team access tokens are not users. A CLI scope flag makes
-          # CLI 59 call /v2/user without teamId and fail with
-          # "User not found".
-          deployment_json="$(./.github/vercel-cli/node_modules/.bin/vercel deploy \
-            --prebuilt \
-            --prod \
-            --skip-domain \
-            --yes \
-            --meta "releaseTag=$RELEASE_TAG" \
-            --meta "releaseSha=$RELEASE_SHA" \
-            --json)"
-          deployment="$(jq -ce '.deployment // .' <<<"$deployment_json")"
-          deployment_url="$(jq -er .url <<<"$deployment")"
-          deployment_id="$(jq -er .id <<<"$deployment")"
-          case "$deployment_url" in
-            https://*) ;;
-            *) deployment_url="https://$deployment_url" ;;
-          esac
-          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
-          echo "id=$deployment_id" >> "$GITHUB_OUTPUT"
-      - name: Smoke-test the staged deployment
-        env:
-          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
-        run: |
-          # Team access tokens cannot run these CLI entrypoints: CLI 59
-          # loads /v2/user without teamId. The trusted policy on main
-          # still requires the paths to appear.
-          : "${DOCS_VERCEL_CURL:=./.github/vercel-cli/node_modules/.bin/vercel curl}"
-          : "${DOCS_VERCEL_PROMOTE:=./.github/vercel-cli/node_modules/.bin/vercel promote}"
-
-          request() {
-            local path="$1"
-            local output="$2"
-            curl \
-              --fail \
-              --silent \
-              --show-error \
-              --output "$output" \
-              "$DEPLOYMENT_URL$path"
-          }
-
-          request /docs/ "$RUNNER_TEMP/docs-index.html"
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --dump-header "$RUNNER_TEMP/docs-headers" \
-            --output /dev/null \
-            "$DEPLOYMENT_URL/docs/"
-          request /docs/quickstart/ "$RUNNER_TEMP/docs-quickstart.html"
-          request /docs/search-index.json "$RUNNER_TEMP/docs-search-index.json"
-          request /docs/sitemap.xml "$RUNNER_TEMP/docs-sitemap.xml"
-
-          grep -Fq 'https://www.tidebreak.io/docs/' "$RUNNER_TEMP/docs-index.html"
-          grep -Fq '/docs/_next/' "$RUNNER_TEMP/docs-index.html"
-          asset_path="$(grep -oE '/docs/_next/[^" ]+' \
-            "$RUNNER_TEMP/docs-index.html" | head -n 1)"
-          case "$asset_path" in
-            /docs/_next/*) ;;
-            *) echo "Documentation did not reference a safe Next asset." >&2; exit 1 ;;
-          esac
-          request "$asset_path" "$RUNNER_TEMP/docs-asset"
-          grep -Eqi "content-security-policy:.*default-src 'self'" "$RUNNER_TEMP/docs-headers"
-          grep -Eqi "content-security-policy:.*object-src 'none'" "$RUNNER_TEMP/docs-headers"
-          grep -Eqi "content-security-policy:.*frame-ancestors 'none'" "$RUNNER_TEMP/docs-headers"
-          grep -Fqi 'cross-origin-opener-policy: same-origin' "$RUNNER_TEMP/docs-headers"
-          grep -Fqi 'cross-origin-resource-policy: same-origin' "$RUNNER_TEMP/docs-headers"
-          grep -Fqi 'x-content-type-options: nosniff' "$RUNNER_TEMP/docs-headers"
-          grep -Fqi 'x-frame-options: DENY' "$RUNNER_TEMP/docs-headers"
-          jq -e 'type == "array" and length > 0' \
-            "$RUNNER_TEMP/docs-search-index.json" >/dev/null
-          grep -Fq '<urlset' "$RUNNER_TEMP/docs-sitemap.xml"
-      - name: Promote the verified deployment
-        env:
-          DEPLOYMENT_ID: ${{ steps.deploy.outputs.id }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          node --input-type=module -e '
-          const token = process.env.VERCEL_TOKEN;
-          const teamId = process.env.VERCEL_ORG_ID;
-          const projectId = process.env.VERCEL_PROJECT_ID;
-          const deploymentId = process.env.DEPLOYMENT_ID;
-          if (!token || !teamId || !projectId || !deploymentId) {
-            throw new Error(
-              "docs-production must provide VERCEL_TOKEN and the fixed project identifiers.",
-            );
-          }
-          const url = new URL(
-            "/v10/projects/" + projectId + "/promote/" + deploymentId,
-            "https://api.vercel.com",
-          );
-          url.searchParams.set("teamId", teamId);
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              authorization: "Bearer " + token,
-              "content-type": "application/json",
-            },
-            body: "{}",
-          });
-          if (!response.ok) {
-            throw new Error("Vercel promote failed: " + response.status);
-          }
-          '
-      - name: Verify the production alias
-        env:
-          DEPLOYMENT_ID: ${{ steps.deploy.outputs.id }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          for _ in {1..12}; do
-            production_json="$(node --input-type=module -e '
-          const token = process.env.VERCEL_TOKEN;
-          const teamId = process.env.VERCEL_ORG_ID;
-          if (!token || !teamId) process.exit(1);
-          const url = new URL(
-            "/v13/deployments/tidebreak-docs.vercel.app",
-            "https://api.vercel.com",
-          );
-          url.searchParams.set("teamId", teamId);
-          const response = await fetch(url, {
-            headers: { authorization: "Bearer " + token },
-          });
-          if (!response.ok) process.exit(1);
-          const deployment = JSON.parse(await response.text());
-          process.stdout.write(JSON.stringify({
-            id: deployment.id,
-            readyState: deployment.readyState,
-          }));
-          ' || true)"
-            if jq -e --arg id "$DEPLOYMENT_ID" \
-              '.id == $id and .readyState == "READY"' \
-              <<<"$production_json" >/dev/null \
-              && curl \
-              --fail \
-              --silent \
-              --show-error \
-              https://tidebreak-docs.vercel.app/docs/ \
-              --dump-header "$RUNNER_TEMP/docs-production-headers" \
-              --output "$RUNNER_TEMP/docs-production.html" \
-              && grep -Fq 'https://www.tidebreak.io/docs/' \
-                "$RUNNER_TEMP/docs-production.html" \
-              && grep -Eqi "content-security-policy:.*default-src 'self'" \
-                "$RUNNER_TEMP/docs-production-headers" \
-              && grep -Eqi "content-security-policy:.*object-src 'none'" \
-                "$RUNNER_TEMP/docs-production-headers" \
-              && grep -Eqi "content-security-policy:.*frame-ancestors 'none'" \
-                "$RUNNER_TEMP/docs-production-headers" \
-              && grep -Fqi 'x-frame-options: DENY' \
-                "$RUNNER_TEMP/docs-production-headers"; then
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "The promoted docs deployment did not become healthy." >&2
-          exit 1
-  inspect_hosted:
-    name: inspect hosted release
-    needs: validate
-    runs-on: ubuntu-latest
-    environment:
-      name: desktop-production
-      url: https://downloads.brightwave.io/tidebreak/manifest.json
-    permissions:
-      contents: read
-      id-token: write
-    outputs:
-      exists: ${{ steps.release.outputs.exists }}
-    env:
-      TIDEBREAK_VERSION: ${{ needs.validate.outputs.version }}
-      RELEASE_TAG: ${{ needs.validate.outputs.tag }}
-      RELEASE_SHA: ${{ needs.validate.outputs.sha }}
-      RELEASE_PUBLISHED_AT: ${{ needs.validate.outputs.published_at }}
-      RELEASE_BASE_URL: https://downloads.brightwave.io/tidebreak
-      AWS_REGION: ${{ vars.DOWNLOADS_AWS_REGION || 'us-east-1' }}
-      AWS_RELEASE_ROLE_ARN: ${{ vars.AWS_RELEASE_ROLE_ARN }}
-      DOWNLOADS_S3_BUCKET: ${{ vars.DOWNLOADS_S3_BUCKET }}
-    steps:
-      - name: Check out trusted release automation
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Validate hosting configuration
-        run: |
-          missing=()
-          for name in AWS_REGION AWS_RELEASE_ROLE_ARN DOWNLOADS_S3_BUCKET; do
-            [[ -n "${!name:-}" ]] || missing+=("$name")
-          done
-          if (( ${#missing[@]} > 0 )); then
-            printf 'Missing desktop-production hosting configuration: %s\n' "${missing[*]}" >&2
-            exit 1
-          fi
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
-        with:
-          role-to-assume: ${{ env.AWS_RELEASE_ROLE_ARN }}
-          role-session-name: tidebreak-inspect-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Validate any existing immutable release
-        id: release
-        run: |
-          release_prefix="tidebreak/releases/v$TIDEBREAK_VERSION"
-          manifest_key="$release_prefix/manifest.json"
-          head_error="$RUNNER_TEMP/manifest-head-error"
-          if ! manifest_head="$(aws s3api head-object \
-            --bucket "$DOWNLOADS_S3_BUCKET" \
-            --key "$manifest_key" \
-            --output json 2>"$head_error")"; then
-            error="$(<"$head_error")"
-            case "$error" in
-              *404*|*Not\ Found*)
-                echo "No immutable release exists for $RELEASE_TAG."
-                echo "exists=false" >> "$GITHUB_OUTPUT"
-                exit 0
-                ;;
-              *) printf '%s\n' "$error" >&2; exit 1 ;;
-            esac
-          fi
-
-          manifest_path="$RUNNER_TEMP/hosted-manifest.json"
-          latest_path="$RUNNER_TEMP/hosted-latest.json"
-          aws s3 cp \
-            "s3://$DOWNLOADS_S3_BUCKET/$manifest_key" \
-            "$manifest_path" >/dev/null
-          node scripts/prepare-published-release.mjs \
-            --manifest "$manifest_path" \
-            --latest "$latest_path" \
-            --version "$TIDEBREAK_VERSION" \
-            --tag "$RELEASE_TAG" \
-            --sha "$RELEASE_SHA" \
-            --published-at "$RELEASE_PUBLISHED_AT" \
-            --base-url "$RELEASE_BASE_URL" \
-            --platforms "${{ inputs.platforms || 'macos' }}"
-
-          manifest_digest="$(sha256sum "$manifest_path" | cut -d ' ' -f 1)"
-          [[ "$(jq -r '.Metadata.sha256 // empty' <<<"$manifest_head")" = "$manifest_digest" ]] || {
-            echo "The immutable release manifest has invalid S3 digest metadata." >&2
-            exit 1
-          }
-
-          while IFS=$'\t' read -r filename size digest checksum signature signature_digest; do
-            object_info="$(aws s3api head-object \
-              --bucket "$DOWNLOADS_S3_BUCKET" \
-              --key "$release_prefix/$filename" \
-              --query '[ContentLength, Metadata.sha256]' \
-              --output text)"
-            read -r remote_size remote_digest <<<"$object_info"
-            [[ "$remote_size" = "$size" && "$remote_digest" = "$digest" ]] || {
-              echo "Hosted artifact metadata does not match the immutable manifest: $filename" >&2
-              exit 1
-            }
-            aws s3api head-object \
-              --bucket "$DOWNLOADS_S3_BUCKET" \
-              --key "$release_prefix/$checksum" >/dev/null
-
-            if [[ "$signature" != "-" ]]; then
-              remote_signature_digest="$(aws s3api head-object \
-                --bucket "$DOWNLOADS_S3_BUCKET" \
-                --key "$release_prefix/$signature" \
-                --query Metadata.sha256 \
-                --output text)"
-              [[ "$remote_signature_digest" = "$signature_digest" ]] || {
-                echo "Hosted signature metadata does not match the immutable manifest: $signature" >&2
-                exit 1
-              }
-              aws s3api head-object \
-                --bucket "$DOWNLOADS_S3_BUCKET" \
-                --key "$release_prefix/$signature.sha256" >/dev/null
-            fi
-          done < <(jq -r \
-            '.artifacts[] | [
-              .filename,
-              (.size | tostring),
-              .sha256,
-              .checksum_filename,
-              (.signature_filename // "-"),
-              (.signature_sha256 // "-")
-            ] | @tsv' \
-            "$manifest_path")
-
-          echo "Validated the complete immutable release for $RELEASE_TAG."
-          echo "exists=true" >> "$GITHUB_OUTPUT"
-
   notices:
     name: third-party notices
     needs: validate
@@ -638,17 +202,12 @@ jobs:
 
   prepare_macos:
     name: prepare unsigned macOS · ${{ matrix.target }}
-    needs: [validate, inspect_hosted, notices]
-    if: >-
-      ${{
-        needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.outputs.exists != 'true'
-      }}
+    needs: [validate, notices]
+    if: ${{ needs.validate.outputs.draft == 'true' }}
     runs-on: macos-latest
     timeout-minutes: 90
     permissions:
       contents: read
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -706,7 +265,7 @@ jobs:
           key: macos-release-target-v5-${{ matrix.target }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ needs.validate.outputs.sha }}-${{ needs.validate.outputs.version }}
 
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: write
 
@@ -839,14 +398,12 @@ jobs:
 
   combine_macos:
     name: combine unsigned macOS · universal
-    needs: [validate, inspect_hosted, prepare_macos]
+    needs: [validate, prepare_macos]
     if: >-
       ${{
         always()
         && needs.validate.result == 'success'
         && needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.result == 'success'
-        && needs.inspect_hosted.outputs.exists != 'true'
         && needs.prepare_macos.result == 'success'
       }}
     runs-on: macos-latest
@@ -973,14 +530,12 @@ jobs:
 
   build_macos:
     name: macOS · universal
-    needs: [validate, inspect_hosted, notices, combine_macos]
+    needs: [validate, notices, combine_macos]
     if: >-
       ${{
         always()
         && needs.validate.result == 'success'
         && needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.result == 'success'
-        && needs.inspect_hosted.outputs.exists != 'true'
         && needs.notices.result == 'success'
         && needs.combine_macos.result == 'success'
       }}
@@ -988,12 +543,15 @@ jobs:
     timeout-minutes: 90
     environment:
       name: desktop-production
-      url: https://downloads.brightwave.io/tidebreak/manifest.json
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}
+    outputs:
+      signing: ${{ steps.signing.outputs.mode }}
+    # The Apple values stay step-scoped. Tauri's bundler reads
+    # APPLE_SIGNING_IDENTITY from the environment even when it is empty, and an
+    # empty value there would override the ad-hoc identity in the build
+    # configuration.
     env:
       TIDEBREAK_VERSION: ${{ needs.validate.outputs.version }}
-      APPLE_API_ISSUER: ${{ vars.APPLE_API_ISSUER }}
-      APPLE_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
-      APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -1068,34 +626,64 @@ jobs:
           echo "$GITHUB_WORKSPACE/.github/tauri-cli/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Validate production signing configuration
+        id: signing
         env:
+          APPLE_API_ISSUER: ${{ vars.APPLE_API_ISSUER }}
+          APPLE_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
           APPLE_API_PRIVATE_KEY: ${{ secrets.APPLE_API_PRIVATE_KEY }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           missing=()
+          for name in \
+            TAURI_SIGNING_PRIVATE_KEY \
+            TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+            [[ -n "${!name:-}" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing updater signing configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+          # Apple signing is optional. With every Apple value the app is signed
+          # with the Developer ID certificate and notarized. With none of them
+          # it is ad-hoc signed and not notarized, and the release notes say
+          # so. A partial set is a misconfiguration, never a quiet fallback.
+          present=()
+          absent=()
           for name in \
             APPLE_API_ISSUER \
             APPLE_API_KEY_ID \
             APPLE_API_PRIVATE_KEY \
             APPLE_CERTIFICATE \
             APPLE_CERTIFICATE_PASSWORD \
-            APPLE_SIGNING_IDENTITY \
-            TAURI_SIGNING_PRIVATE_KEY \
-            TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
-            [[ -n "${!name:-}" ]] || missing+=("$name")
+            APPLE_SIGNING_IDENTITY; do
+            if [[ -n "${!name:-}" ]]; then
+              present+=("$name")
+            else
+              absent+=("$name")
+            fi
           done
-          if (( ${#missing[@]} > 0 )); then
-            printf 'Missing desktop-production signing configuration: %s\n' "${missing[*]}" >&2
+          if (( ${#absent[@]} == 0 )); then
+            echo "Signing with the Developer ID certificate and notarizing."
+            echo "mode=developer-id" >> "$GITHUB_OUTPUT"
+          elif (( ${#present[@]} == 0 )); then
+            echo "::warning::No Apple signing configuration. This macOS build is ad-hoc signed and not notarized."
+            echo "mode=adhoc" >> "$GITHUB_OUTPUT"
+          else
+            printf 'Incomplete Apple signing configuration; missing: %s\n' "${absent[*]}" >&2
             exit 1
           fi
 
       - name: Import Developer ID certificate
+        if: ${{ steps.signing.outputs.mode == 'developer-id' }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
         run: |
           certificate_path="$RUNNER_TEMP/tidebreak-signing.p12"
           keychain_path="$RUNNER_TEMP/tidebreak-signing.keychain-db"
@@ -1133,23 +721,35 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Sign the computer-use helper resource
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
+          SIGNING_MODE: ${{ steps.signing.outputs.mode }}
         run: |
           cu_resource="crates/tidebreak-desktop/resources/host-broker/tidebreak-cu-helper"
           [[ -x "$cu_resource" ]] || {
             echo "Prepared computer-use helper is missing or not executable: $cu_resource" >&2
             exit 1
           }
-          codesign --force --options runtime --timestamp \
-            --identifier io.brightwave.tidebreak.cu-helper \
-            --sign "$APPLE_SIGNING_IDENTITY" \
-            --keychain "$APPLE_SIGNING_KEYCHAIN" \
-            "$cu_resource"
+          if [[ "$SIGNING_MODE" = developer-id ]]; then
+            codesign --force --options runtime --timestamp \
+              --identifier io.brightwave.tidebreak.cu-helper \
+              --sign "$APPLE_SIGNING_IDENTITY" \
+              --keychain "$APPLE_SIGNING_KEYCHAIN" \
+              "$cu_resource"
+          else
+            codesign --force --options runtime --timestamp=none \
+              --identifier io.brightwave.tidebreak.cu-helper \
+              --sign - \
+              "$cu_resource"
+          fi
           codesign --verify --strict --verbose=2 "$cu_resource"
 
       - name: Add the macOS signing identity to the prepared configuration
         env:
+          APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
           PREPARED_CONFIG: ${{ runner.temp }}/tidebreak-release.json
           RELEASE_CONFIG: ${{ runner.temp }}/tidebreak-signing.json
+          SIGNING_MODE: ${{ steps.signing.outputs.mode }}
         run: |
           node -e '
             const fs = require("node:fs");
@@ -1157,9 +757,14 @@ jobs:
             if (config.version !== process.env.TIDEBREAK_VERSION) {
               throw new Error("Prepared version " + config.version + " does not match " + process.env.TIDEBREAK_VERSION);
             }
+            // "-" makes the bundler sign the app ad-hoc. It leaves the DMG
+            // unsigned.
+            const identity = process.env.SIGNING_MODE === "developer-id"
+              ? process.env.APPLE_SIGNING_IDENTITY
+              : "-";
             config.bundle.macOS = {
               ...(config.bundle.macOS ?? {}),
-              signingIdentity: process.env.APPLE_SIGNING_IDENTITY
+              signingIdentity: identity
             };
             fs.writeFileSync(process.env.RELEASE_CONFIG, JSON.stringify(config));
           '
@@ -1178,7 +783,9 @@ jobs:
             --ci
 
       - name: Prepare App Store Connect key
+        if: ${{ steps.signing.outputs.mode == 'developer-id' }}
         env:
+          APPLE_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
           APPLE_API_PRIVATE_KEY: ${{ secrets.APPLE_API_PRIVATE_KEY }}
         run: |
           key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
@@ -1190,7 +797,10 @@ jobs:
       # Notarizing the DMG registers tickets for the DMG and the identically
       # signed app inside it, so both staples come from this one submission.
       - name: Notarize the DMG, then staple the DMG and app
+        if: ${{ steps.signing.outputs.mode == 'developer-id' }}
         env:
+          APPLE_API_ISSUER: ${{ vars.APPLE_API_ISSUER }}
+          APPLE_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
           RELEASE_TARGET: universal-apple-darwin
         run: |
           target_dir="$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)"
@@ -1236,6 +846,7 @@ jobs:
         env:
           RELEASE_ARCH: universal
           RELEASE_TARGET: universal-apple-darwin
+          SIGNING_MODE: ${{ steps.signing.outputs.mode }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
@@ -1282,11 +893,15 @@ jobs:
           done
 
           codesign --verify --deep --strict --verbose=2 "$app_path"
-          xcrun stapler validate "$app_path"
-          spctl --assess --type execute --verbose=4 "$app_path"
-          codesign --verify --verbose=2 "$dmg_path"
-          xcrun stapler validate "$dmg_path"
-          spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg_path"
+          # An ad-hoc app passes none of Gatekeeper's checks, and the bundler
+          # leaves its DMG unsigned, so only a notarized build is assessed.
+          if [[ "$SIGNING_MODE" = developer-id ]]; then
+            xcrun stapler validate "$app_path"
+            spctl --assess --type execute --verbose=4 "$app_path"
+            codesign --verify --verbose=2 "$dmg_path"
+            xcrun stapler validate "$dmg_path"
+            spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg_path"
+          fi
 
           executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_path/Contents/Info.plist")"
           binary_arches="$(lipo -archs "$app_path/Contents/MacOS/$executable")"
@@ -1332,17 +947,24 @@ jobs:
           }
           codesign --verify --strict --verbose=2 "$cu_helper"
           helper_signature="$(codesign --display --verbose=4 "$cu_helper" 2>&1)"
+          app_signature="$(codesign --display --verbose=4 "$app_path" 2>&1)"
           helper_identifier="$(printf '%s\n' "$helper_signature" | sed -n 's/^Identifier=//p')"
           helper_team="$(printf '%s\n' "$helper_signature" | sed -n 's/^TeamIdentifier=//p')"
-          app_team="$(codesign --display --verbose=4 "$app_path" 2>&1 | sed -n 's/^TeamIdentifier=//p')"
+          app_team="$(printf '%s\n' "$app_signature" | sed -n 's/^TeamIdentifier=//p')"
           [[ "$helper_identifier" = io.brightwave.tidebreak.cu-helper ]] || {
             echo "Computer-use helper has an unexpected signing identifier: $helper_identifier" >&2
             exit 1
           }
-          [[ -n "$app_team" && "$app_team" != "not set" && "$helper_team" = "$app_team" ]] || {
-            echo "Computer-use helper signing team does not match the app: $helper_team / $app_team" >&2
+          if [[ "$SIGNING_MODE" = developer-id ]]; then
+            [[ -n "$app_team" && "$app_team" != "not set" && "$helper_team" = "$app_team" ]] || {
+              echo "Computer-use helper signing team does not match the app: $helper_team / $app_team" >&2
+              exit 1
+            }
+          elif ! grep -qx 'Signature=adhoc' <<<"$helper_signature" \
+            || ! grep -qx 'Signature=adhoc' <<<"$app_signature"; then
+            echo "An ad-hoc release must sign the app and the computer-use helper ad-hoc." >&2
             exit 1
-          }
+          fi
 
           # Recreate the updater after notarization so the archive contains the
           # stapled app, then sign those exact bytes for latest.json.
@@ -1365,6 +987,18 @@ jobs:
           ditto -c -k --keepParent "$app_path" "$output_dir/${base_name}.app.zip"
           find "$output_dir" -type f -print
 
+      - name: Smoke-test packaged GitHub CLI discovery
+        env:
+          RELEASE_TARGET: universal-apple-darwin
+        run: |
+          target_dir="$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)"
+          app_paths=("$target_dir/$RELEASE_TARGET/release/bundle/macos/"*.app)
+          (( ${#app_paths[@]} == 1 )) && [[ -d "${app_paths[0]}" ]] || {
+            echo "Expected exactly one packaged macOS app to smoke-test." >&2
+            exit 1
+          }
+          scripts/smoke-packaged-gh-discovery.sh "${app_paths[0]}"
+
       - name: Upload verified macOS artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -1385,18 +1019,16 @@ jobs:
 
   prepare_windows:
     name: prepare unsigned Windows sidecars · ${{ matrix.arch }}
-    needs: [validate, inspect_hosted, notices]
+    needs: [validate, notices]
     if: >-
       ${{
         inputs.platforms == 'all'
         && needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.outputs.exists != 'true'
       }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
       contents: read
-      id-token: write
     defaults:
       run:
         shell: bash
@@ -1406,7 +1038,7 @@ jobs:
         include:
           - arch: x86_64
             target: x86_64-pc-windows-msvc
-            runner: ${{ vars.RELEASE_WINDOWS_X64_RUNNER || 'windows-latest' }}
+            runner: windows-latest
           - arch: aarch64
             target: aarch64-pc-windows-msvc
             runner: windows-11-arm
@@ -1458,7 +1090,7 @@ jobs:
             crates/tidebreak-desktop/binaries/tidebreak-${{ matrix.target }}.exe
 
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: write
 
@@ -1559,18 +1191,16 @@ jobs:
 
   prepare_windows_desktop:
     name: prepare unsigned Windows desktop · ${{ matrix.arch }}
-    needs: [validate, inspect_hosted, notices]
+    needs: [validate, notices]
     if: >-
       ${{
         inputs.platforms == 'all'
         && needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.outputs.exists != 'true'
       }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
       contents: read
-      id-token: write
     defaults:
       run:
         shell: bash
@@ -1580,7 +1210,7 @@ jobs:
         include:
           - arch: x86_64
             target: x86_64-pc-windows-msvc
-            runner: ${{ vars.RELEASE_WINDOWS_X64_RUNNER || 'windows-latest' }}
+            runner: windows-latest
           - arch: aarch64
             target: aarch64-pc-windows-msvc
             runner: windows-11-arm
@@ -1657,7 +1287,7 @@ jobs:
             > "crates/tidebreak-desktop/binaries/tidebreak-$RELEASE_TARGET.exe"
 
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: write
 
@@ -1766,15 +1396,13 @@ jobs:
 
   build_windows:
     name: Windows · ${{ matrix.arch }}
-    needs: [validate, inspect_hosted, notices, prepare_windows, prepare_windows_desktop]
+    needs: [validate, notices, prepare_windows, prepare_windows_desktop]
     if: >-
       ${{
         always()
         && inputs.platforms == 'all'
         && needs.validate.result == 'success'
         && needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.result == 'success'
-        && needs.inspect_hosted.outputs.exists != 'true'
         && needs.notices.result == 'success'
         && needs.prepare_windows.result == 'success'
         && needs.prepare_windows_desktop.result == 'success'
@@ -1783,7 +1411,7 @@ jobs:
     timeout-minutes: 90
     environment:
       name: desktop-production
-      url: https://downloads.brightwave.io/tidebreak/manifest.json
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}
     defaults:
       run:
         shell: bash
@@ -1793,7 +1421,7 @@ jobs:
         include:
           - arch: x86_64
             target: x86_64-pc-windows-msvc
-            runner: ${{ vars.RELEASE_WINDOWS_X64_RUNNER || 'windows-latest' }}
+            runner: windows-latest
           - arch: aarch64
             target: aarch64-pc-windows-msvc
             runner: windows-11-arm
@@ -1995,12 +1623,11 @@ jobs:
 
   build_linux:
     name: Linux · ${{ matrix.arch }}
-    needs: [validate, inspect_hosted, notices]
+    needs: [validate, notices]
     if: >-
       ${{
         inputs.platforms == 'all'
         && needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.outputs.exists != 'true'
       }}
     # The x86_64 baseline remains `runs-on: ubuntu-22.04`; the matrix adds the
     # matching native Ubuntu 22.04 ARM runner without changing that baseline.
@@ -2008,10 +1635,9 @@ jobs:
     timeout-minutes: 90
     environment:
       name: desktop-production
-      url: https://downloads.brightwave.io/tidebreak/manifest.json
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}
     permissions:
       contents: read
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -2062,7 +1688,7 @@ jobs:
           }
 
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: write
 
@@ -2193,12 +1819,8 @@ jobs:
 
   source_sbom:
     name: generate source SBOM
-    needs: [validate, inspect_hosted]
-    if: >-
-      ${{
-        needs.validate.outputs.draft == 'true'
-        && needs.inspect_hosted.outputs.exists != 'true'
-      }}
+    needs: validate
+    if: ${{ needs.validate.outputs.draft == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -2240,407 +1862,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  publish:
-    name: publish downloads.brightwave.io
-    needs: [validate, inspect_hosted, build_macos, build_windows, build_linux, source_sbom, finalize_release]
-    # Paused platforms report `skipped`; that only counts as success while the
-    # run was dispatched without them.
-    if: >-
-      ${{
-        always()
-        && needs.validate.result == 'success'
-        && needs.inspect_hosted.result == 'success'
-        && needs.finalize_release.result == 'success'
-        && (
-          needs.inspect_hosted.outputs.exists == 'true'
-          || needs.validate.outputs.draft != 'true'
-          || (
-            needs.build_macos.result == 'success'
-            && (
-              needs.build_windows.result == 'success'
-              || (inputs.platforms != 'all' && needs.build_windows.result == 'skipped')
-            )
-            && (
-              needs.build_linux.result == 'success'
-              || (inputs.platforms != 'all' && needs.build_linux.result == 'skipped')
-            )
-            && needs.source_sbom.result == 'success'
-          )
-        )
-      }}
-    runs-on: ubuntu-latest
-    environment:
-      name: desktop-production
-      url: https://downloads.brightwave.io/tidebreak/manifest.json
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
-    env:
-      TIDEBREAK_VERSION: ${{ needs.validate.outputs.version }}
-      RELEASE_TAG: ${{ needs.validate.outputs.tag }}
-      RELEASE_SHA: ${{ needs.validate.outputs.sha }}
-      RELEASE_PUBLISHED_AT: ${{ needs.finalize_release.outputs.published_at }}
-      RELEASE_BASE_URL: https://downloads.brightwave.io/tidebreak
-      RELEASE_PLATFORMS: ${{ inputs.platforms || 'macos' }}
-      AWS_REGION: ${{ vars.DOWNLOADS_AWS_REGION || 'us-east-1' }}
-      AWS_RELEASE_ROLE_ARN: ${{ vars.AWS_RELEASE_ROLE_ARN }}
-      DOWNLOADS_CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DOWNLOADS_CLOUDFRONT_DISTRIBUTION_ID }}
-      DOWNLOADS_S3_BUCKET: ${{ vars.DOWNLOADS_S3_BUCKET }}
-    steps:
-      - name: Check out trusted release automation
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Validate hosting configuration
-        run: |
-          missing=()
-          for name in \
-            AWS_REGION \
-            AWS_RELEASE_ROLE_ARN \
-            DOWNLOADS_CLOUDFRONT_DISTRIBUTION_ID \
-            DOWNLOADS_S3_BUCKET; do
-            [[ -n "${!name:-}" ]] || missing+=("$name")
-          done
-          if (( ${#missing[@]} > 0 )); then
-            printf 'Missing desktop-production hosting configuration: %s\n' "${missing[*]}" >&2
-            exit 1
-          fi
-
-      - name: Download universal macOS artifacts
-        if: >-
-          ${{
-            needs.validate.outputs.draft == 'true'
-            && needs.inspect_hosted.outputs.exists != 'true'
-          }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-macos-universal-${{ needs.validate.outputs.version }}
-          path: dist/macos/universal
-
-      - name: Download x86_64 Windows artifacts
-        if: >-
-          ${{
-            inputs.platforms == 'all'
-            && needs.validate.outputs.draft == 'true'
-            && needs.inspect_hosted.outputs.exists != 'true'
-          }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-windows-x86_64-${{ needs.validate.outputs.version }}
-          path: dist/windows/x86_64
-
-      - name: Download ARM64 Windows artifacts
-        if: >-
-          ${{
-            inputs.platforms == 'all'
-            && needs.validate.outputs.draft == 'true'
-            && needs.inspect_hosted.outputs.exists != 'true'
-          }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-windows-aarch64-${{ needs.validate.outputs.version }}
-          path: dist/windows/aarch64
-
-      - name: Download x86_64 Linux artifacts
-        if: >-
-          ${{
-            inputs.platforms == 'all'
-            && needs.validate.outputs.draft == 'true'
-            && needs.inspect_hosted.outputs.exists != 'true'
-          }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-linux-x86_64-${{ needs.validate.outputs.version }}
-          path: dist/linux/x86_64
-
-      - name: Download ARM64 Linux artifacts
-        if: >-
-          ${{
-            inputs.platforms == 'all'
-            && needs.validate.outputs.draft == 'true'
-            && needs.inspect_hosted.outputs.exists != 'true'
-          }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-linux-aarch64-${{ needs.validate.outputs.version }}
-          path: dist/linux/aarch64
-
-      - name: Recover build inputs from the immutable GitHub Release
-        if: >-
-          ${{
-            needs.validate.outputs.draft != 'true'
-            && needs.inspect_hosted.outputs.exists != 'true'
-          }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p \
-            recovery \
-            dist/macos/universal \
-            dist/windows/x86_64 \
-            dist/windows/aarch64 \
-            dist/linux/x86_64 \
-            dist/linux/aarch64
-          gh release download "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --dir recovery
-
-          while IFS= read -r -d '' checksum; do
-            (cd recovery && sha256sum --check --strict "${checksum#recovery/}")
-          done < <(find recovery -name '*.sha256' -type f -print0)
-
-          base="Tidebreak_${TIDEBREAK_VERSION}_universal"
-          cp recovery/Tidebreak-macos-universal.dmg \
-            "dist/macos/universal/$base.dmg"
-          for suffix in app.zip app.tar.gz app.tar.gz.sig; do
-            file="$base.$suffix"
-            [[ -f "recovery/$file" ]] || {
-              echo "Immutable GitHub Release is missing recovery asset: $file" >&2
-              exit 1
-            }
-            cp "recovery/$file" "dist/macos/universal/$file"
-          done
-
-          # A macOS-only release never had these; a retry must repeat the
-          # platform selection of the run that created the release.
-          if [[ "$RELEASE_PLATFORMS" == all ]]; then
-            for arch in x86_64 aarch64; do
-              windows_base="Tidebreak_${TIDEBREAK_VERSION}_${arch}"
-              for suffix in setup.exe setup.exe.sig; do
-                file="$windows_base-$suffix"
-                [[ -f "recovery/$file" ]] || {
-                  echo "Immutable GitHub Release is missing recovery asset: $file" >&2
-                  exit 1
-                }
-                cp "recovery/$file" "dist/windows/$arch/$file"
-              done
-
-              linux_base="Tidebreak_${TIDEBREAK_VERSION}_${arch}"
-              for suffix in AppImage AppImage.sig deb deb.sig; do
-                file="$linux_base.$suffix"
-                [[ -f "recovery/$file" ]] || {
-                  echo "Immutable GitHub Release is missing recovery asset: $file" >&2
-                  exit 1
-                }
-                cp "recovery/$file" "dist/linux/$arch/$file"
-              done
-            done
-          fi
-
-          sbom="Tidebreak_${TIDEBREAK_VERSION}_source.spdx.json"
-          cp "recovery/$sbom" "dist/$sbom"
-          cp "recovery/$sbom.sha256" "dist/$sbom.sha256"
-          (cd dist && sha256sum --check --strict "$sbom.sha256")
-
-      - name: Create release manifests and checksums
-        if: ${{ needs.inspect_hosted.outputs.exists != 'true' }}
-        run: >-
-          node scripts/create-release-manifests.mjs
-          --dist dist
-          --version "$TIDEBREAK_VERSION"
-          --tag "$RELEASE_TAG"
-          --sha "$RELEASE_SHA"
-          --published-at "$RELEASE_PUBLISHED_AT"
-          --base-url "$RELEASE_BASE_URL"
-          --platforms "$RELEASE_PLATFORMS"
-
-      - name: Download the checksummed source SBOM
-        if: >-
-          ${{
-            needs.validate.outputs.draft == 'true'
-            && needs.inspect_hosted.outputs.exists != 'true'
-          }}
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: tidebreak-source-sbom-${{ needs.validate.outputs.version }}
-          path: dist
-
-      - name: Prepare provenance attestation subjects
-        if: ${{ needs.inspect_hosted.outputs.exists != 'true' }}
-        run: |
-          sbom="dist/Tidebreak_${TIDEBREAK_VERSION}_source.spdx.json"
-          (cd dist && sha256sum --check --strict "${sbom#dist/}.sha256")
-          find dist -type f ! -name latest.json -print0 \
-            | sort -z \
-            | xargs -0 sha256sum \
-            > "$RUNNER_TEMP/immutable-release-files.sha256"
-
-      # GitHub artifact attestations are available to every public repository,
-      # but private repositories require Enterprise Cloud. The release remains
-      # usable while this repository is private; public releases fail closed if
-      # its independently signed provenance cannot be recorded.
-      - name: Attest immutable release provenance
-        if: >-
-          ${{
-            needs.inspect_hosted.outputs.exists != 'true'
-            && github.event.repository.visibility == 'public'
-          }}
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-checksums: ${{ runner.temp }}/immutable-release-files.sha256
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
-        with:
-          role-to-assume: ${{ env.AWS_RELEASE_ROLE_ARN }}
-          role-session-name: tidebreak-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Resume from the hosted immutable release
-        if: ${{ needs.inspect_hosted.outputs.exists == 'true' }}
-        run: |
-          mkdir -p dist
-          aws s3 cp \
-            "s3://$DOWNLOADS_S3_BUCKET/tidebreak/releases/v$TIDEBREAK_VERSION/manifest.json" \
-            dist/manifest.json >/dev/null
-          node scripts/prepare-published-release.mjs \
-            --manifest dist/manifest.json \
-            --latest dist/latest.json \
-            --version "$TIDEBREAK_VERSION" \
-            --tag "$RELEASE_TAG" \
-            --sha "$RELEASE_SHA" \
-            --published-at "$RELEASE_PUBLISHED_AT" \
-            --base-url "$RELEASE_BASE_URL" \
-            --platforms "$RELEASE_PLATFORMS"
-
-      - name: Prevent latest-version regression
-        run: |
-          error_file="$RUNNER_TEMP/latest-head-error"
-          if aws s3api head-object \
-            --bucket "$DOWNLOADS_S3_BUCKET" \
-            --key tidebreak/latest.json >/dev/null 2>"$error_file"; then
-            aws s3 cp \
-              "s3://$DOWNLOADS_S3_BUCKET/tidebreak/latest.json" \
-              "$RUNNER_TEMP/current-latest.json" >/dev/null
-            current_version="$(jq -er .version "$RUNNER_TEMP/current-latest.json")"
-            node scripts/check-release-order.mjs "$current_version" "$TIDEBREAK_VERSION"
-          else
-            error="$(<"$error_file")"
-            case "$error" in
-              *404*|*Not\ Found*) echo "No current Tidebreak release is hosted yet." ;;
-              *) printf '%s\n' "$error" >&2; exit 1 ;;
-            esac
-          fi
-
-      - name: Upload immutable release files
-        if: ${{ needs.inspect_hosted.outputs.exists != 'true' }}
-        run: |
-          release_prefix="tidebreak/releases/v$TIDEBREAK_VERSION"
-          export release_prefix
-
-          content_type() {
-            case "$1" in
-              *.json) echo application/json ;;
-              *.dmg) echo application/x-apple-diskimage ;;
-              *.exe) echo application/vnd.microsoft.portable-executable ;;
-              *.AppImage) echo application/vnd.appimage ;;
-              *.deb) echo application/vnd.debian.binary-package ;;
-              *.zip) echo application/zip ;;
-              *.tar.gz) echo application/gzip ;;
-              *.sig|*.sha256) echo text/plain ;;
-              *) echo application/octet-stream ;;
-            esac
-          }
-
-          upload_immutable() {
-            set -euo pipefail
-            local file="$1"
-            local key="$2"
-            local head_error digest remote_digest error
-            head_error="$(mktemp)"
-            digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
-            if remote_digest="$(aws s3api head-object \
-              --bucket "$DOWNLOADS_S3_BUCKET" \
-              --key "$key" \
-              --query Metadata.sha256 \
-              --output text 2>"$head_error")"; then
-              [[ "$remote_digest" = "$digest" ]] || {
-                echo "Refusing to overwrite immutable s3://$DOWNLOADS_S3_BUCKET/$key" >&2
-                exit 1
-              }
-              echo "Already uploaded with matching digest: $key"
-              return
-            fi
-            error="$(<"$head_error")"
-            case "$error" in
-              *404*|*Not\ Found*) ;;
-              *) printf '%s\n' "$error" >&2; exit 1 ;;
-            esac
-            aws s3 cp "$file" "s3://$DOWNLOADS_S3_BUCKET/$key" \
-              --content-type "$(content_type "$file")" \
-              --cache-control 'public,max-age=31536000,immutable' \
-              --metadata "sha256=$digest"
-          }
-          export -f content_type upload_immutable
-
-          # Upload the payload files in parallel; a failure in any child fails
-          # this step through xargs. The versioned manifest.json still uploads
-          # last and alone, so the resume preflight can only ever see a
-          # complete immutable prefix behind an existing manifest.
-          find dist -type f ! -name manifest.json ! -name latest.json -print0 \
-            | xargs -0 -n 1 -P 8 bash -c 'upload_immutable "$1" "$release_prefix/${1#dist/}"' _
-          upload_immutable dist/manifest.json "$release_prefix/manifest.json"
-
-      - name: Publish latest release metadata
-        run: |
-          aws s3 cp dist/manifest.json \
-            "s3://$DOWNLOADS_S3_BUCKET/tidebreak/manifest.json" \
-            --content-type application/json \
-            --cache-control 'no-cache, max-age=0'
-          aws s3 cp dist/latest.json \
-            "s3://$DOWNLOADS_S3_BUCKET/tidebreak/latest.json" \
-            --content-type application/json \
-            --cache-control 'no-cache, max-age=0'
-
-      # Do not wait for the invalidation to complete: propagation takes 5-15
-      # minutes, the smoke test below cache-busts its own reads, and real
-      # clients only ever race a short no-cache TTL on these two objects.
-      - name: Invalidate release metadata
-        id: invalidate
-        run: |
-          invalidation_id="$(aws cloudfront create-invalidation \
-            --distribution-id "$DOWNLOADS_CLOUDFRONT_DISTRIBUTION_ID" \
-            --paths '/tidebreak/manifest.json' '/tidebreak/latest.json' \
-            --query Invalidation.Id \
-            --output text)"
-          echo "id=$invalidation_id" >> "$GITHUB_OUTPUT"
-
-      - name: Smoke test hosted release
-        run: |
-          cache_bust="release=$TIDEBREAK_VERSION-$GITHUB_RUN_ID"
-          curl --fail --silent --show-error \
-            "$RELEASE_BASE_URL/latest.json?$cache_bust" \
-            --output "$RUNNER_TEMP/hosted-latest.json"
-          curl --fail --silent --show-error \
-            "$RELEASE_BASE_URL/manifest.json?$cache_bust" \
-            --output "$RUNNER_TEMP/hosted-manifest.json"
-          cmp dist/latest.json "$RUNNER_TEMP/hosted-latest.json"
-          cmp dist/manifest.json "$RUNNER_TEMP/hosted-manifest.json"
-          jq -r '.artifacts[] | .url, .checksum_url, (.signature_url // empty), (.signature_checksum_url // empty)' \
-            dist/manifest.json | while IFS= read -r url; do
-            [[ -n "$url" ]] || continue
-            curl --fail --silent --show-error --head "$url" >/dev/null
-          done
-          sbom="Tidebreak_${TIDEBREAK_VERSION}_source.spdx.json"
-          if [[ -f "dist/$sbom" ]]; then
-            curl --fail --silent --show-error --head \
-              "$RELEASE_BASE_URL/releases/v$TIDEBREAK_VERSION/$sbom" >/dev/null
-            curl --fail --silent --show-error --head \
-              "$RELEASE_BASE_URL/releases/v$TIDEBREAK_VERSION/$sbom.sha256" >/dev/null
-          fi
-
   attach_downloads:
     name: prepare GitHub release downloads
-    needs: [validate, inspect_hosted, build_macos, build_windows, build_linux, source_sbom]
+    needs: [validate, build_macos, build_windows, build_linux, source_sbom]
     # A published release already owns immutable assets. A draft instead needs
     # the fresh package build and SBOM before those assets can be attached.
     if: >-
       ${{
         always()
         && needs.validate.result == 'success'
-        && needs.inspect_hosted.result == 'success'
         && (
           needs.validate.outputs.draft != 'true'
           || (
@@ -2659,120 +1889,157 @@ jobs:
       }}
     runs-on: ubuntu-latest
     permissions:
+      # The provenance attestation needs an OIDC token and its own grant.
+      attestations: write
       contents: write
+      id-token: write
     env:
       TIDEBREAK_VERSION: ${{ needs.validate.outputs.version }}
       RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+      RELEASE_SHA: ${{ needs.validate.outputs.sha }}
       RELEASE_PLATFORMS: ${{ inputs.platforms || 'macos' }}
+      # GitHub Releases is the only download host. The manifests and the
+      # updater feed point here; create-release-manifests.mjs refuses any
+      # other base URL.
+      RELEASE_BASE_URL: https://github.com/${{ github.repository }}/releases/download
     steps:
+      - name: Check out trusted release automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
       - name: Download the verified macOS build
         if: ${{ needs.validate.outputs.draft == 'true' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: tidebreak-macos-universal-${{ needs.validate.outputs.version }}
-          path: release-artifacts/macos
+          path: dist/macos/universal
 
       - name: Download the verified x86_64 Windows build
         if: ${{ inputs.platforms == 'all' && needs.validate.outputs.draft == 'true' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: tidebreak-windows-x86_64-${{ needs.validate.outputs.version }}
-          path: release-artifacts/windows/x86_64
+          path: dist/windows/x86_64
 
       - name: Download the verified ARM64 Windows build
         if: ${{ inputs.platforms == 'all' && needs.validate.outputs.draft == 'true' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: tidebreak-windows-aarch64-${{ needs.validate.outputs.version }}
-          path: release-artifacts/windows/aarch64
+          path: dist/windows/aarch64
 
       - name: Download the verified x86_64 Linux build
         if: ${{ inputs.platforms == 'all' && needs.validate.outputs.draft == 'true' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: tidebreak-linux-x86_64-${{ needs.validate.outputs.version }}
-          path: release-artifacts/linux/x86_64
+          path: dist/linux/x86_64
 
       - name: Download the verified ARM64 Linux build
         if: ${{ inputs.platforms == 'all' && needs.validate.outputs.draft == 'true' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: tidebreak-linux-aarch64-${{ needs.validate.outputs.version }}
-          path: release-artifacts/linux/aarch64
+          path: dist/linux/aarch64
 
       - name: Download the checksummed source SBOM
         if: ${{ needs.validate.outputs.draft == 'true' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: tidebreak-source-sbom-${{ needs.validate.outputs.version }}
-          path: release-artifacts/sbom
+          path: dist
 
+      # GitHub's /releases/latest/ redirect serves whichever published release
+      # is newest, so publishing an older version would roll every installed
+      # app's updater feed back.
+      - name: Prevent latest-version regression
+        if: ${{ needs.validate.outputs.draft == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)"
+          if [[ -z "$current" ]]; then
+            echo "No Tidebreak release is published yet."
+            exit 0
+          fi
+          node scripts/check-release-order.mjs "${current#v}" "$TIDEBREAK_VERSION"
+
+      - name: Create release manifests and checksums
+        if: ${{ needs.validate.outputs.draft == 'true' }}
+        run: >-
+          node scripts/create-release-manifests.mjs
+          --dist dist
+          --version "$TIDEBREAK_VERSION"
+          --tag "$RELEASE_TAG"
+          --sha "$RELEASE_SHA"
+          --published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          --base-url "$RELEASE_BASE_URL"
+          --platforms "$RELEASE_PLATFORMS"
+
+      # Every versioned package, signature, and checksum becomes a release
+      # asset under its own name, beside manifest.json and latest.json. The
+      # version-free copies give the README permanent one-click download links
+      # through GitHub's /releases/latest/download/ redirect.
       - name: Prepare downloads from the verified build
         if: ${{ needs.validate.outputs.draft == 'true' }}
         run: |
           mkdir -p downloads
+          while IFS= read -r -d '' file; do
+            name="${file##*/}"
+            [[ ! -e "downloads/$name" ]] || {
+              echo "Two release files share the asset name $name." >&2
+              exit 1
+            }
+            cp "$file" "downloads/$name"
+          done < <(find dist -type f -print0)
+          for name in manifest.json latest.json; do
+            (cd downloads && sha256sum "$name" > "$name.sha256")
+          done
+          sbom="Tidebreak_${TIDEBREAK_VERSION}_source.spdx.json"
+          (cd downloads && sha256sum --check --strict "$sbom.sha256")
+
           base="Tidebreak_${TIDEBREAK_VERSION}_universal"
-          source_dmg="release-artifacts/macos/$base.dmg"
-          [[ -f "$source_dmg" ]] || {
-            echo "The verified build did not contain the universal DMG." >&2
-            exit 1
-          }
-          cp "$source_dmg" downloads/Tidebreak-macos-universal.dmg
+          for suffix in dmg app.zip app.tar.gz app.tar.gz.sig; do
+            [[ -f "downloads/$base.$suffix" ]] || {
+              echo "The verified build did not contain $base.$suffix." >&2
+              exit 1
+            }
+          done
+          cp "downloads/$base.dmg" downloads/Tidebreak-macos-universal.dmg
           (cd downloads && sha256sum Tidebreak-macos-universal.dmg \
             > Tidebreak-macos-universal.dmg.sha256)
 
-          for suffix in app.zip app.tar.gz app.tar.gz.sig; do
-            file="$base.$suffix"
-            [[ -f "release-artifacts/macos/$file" ]] || {
-              echo "The verified build did not contain $file." >&2
-              exit 1
-            }
-            cp "release-artifacts/macos/$file" "downloads/$file"
-            (cd downloads && sha256sum "$file" > "$file.sha256")
-          done
-
           if [[ "$RELEASE_PLATFORMS" == all ]]; then
-          for arch in x86_64 aarch64; do
-            windows_base="Tidebreak_${TIDEBREAK_VERSION}_${arch}"
-            windows_installer="$windows_base-setup.exe"
-            for file in "$windows_installer" "$windows_installer.sig"; do
-              [[ -f "release-artifacts/windows/$arch/$file" ]] || {
-                echo "The verified Windows $arch build did not contain $file." >&2
-                exit 1
-              }
-              cp "release-artifacts/windows/$arch/$file" "downloads/$file"
-              (cd downloads && sha256sum "$file" > "$file.sha256")
+            for arch in x86_64 aarch64; do
+              versioned="Tidebreak_${TIDEBREAK_VERSION}_${arch}"
+              for file in \
+                "$versioned-setup.exe" \
+                "$versioned-setup.exe.sig" \
+                "$versioned.AppImage" \
+                "$versioned.AppImage.sig" \
+                "$versioned.deb" \
+                "$versioned.deb.sig"; do
+                [[ -f "downloads/$file" ]] || {
+                  echo "The verified $arch build did not contain $file." >&2
+                  exit 1
+                }
+              done
+              cp "downloads/$versioned-setup.exe" \
+                "downloads/Tidebreak-windows-${arch}-setup.exe"
+              cp "downloads/$versioned.AppImage" \
+                "downloads/Tidebreak-linux-${arch}.AppImage"
+              cp "downloads/$versioned.deb" \
+                "downloads/Tidebreak-linux-${arch}.deb"
+              for name in \
+                "Tidebreak-windows-${arch}-setup.exe" \
+                "Tidebreak-linux-${arch}.AppImage" \
+                "Tidebreak-linux-${arch}.deb"; do
+                (cd downloads && sha256sum "$name" > "$name.sha256")
+              done
             done
-            cp "release-artifacts/windows/$arch/$windows_installer" \
-              "downloads/Tidebreak-windows-${arch}-setup.exe"
-            (cd downloads && sha256sum "Tidebreak-windows-${arch}-setup.exe" \
-              > "Tidebreak-windows-${arch}-setup.exe.sha256")
-
-            linux_base="Tidebreak_${TIDEBREAK_VERSION}_${arch}"
-            for suffix in AppImage AppImage.sig deb deb.sig; do
-              file="$linux_base.$suffix"
-              [[ -f "release-artifacts/linux/$arch/$file" ]] || {
-                echo "The verified Linux $arch build did not contain $file." >&2
-                exit 1
-              }
-              cp "release-artifacts/linux/$arch/$file" "downloads/$file"
-              (cd downloads && sha256sum "$file" > "$file.sha256")
-            done
-            cp "release-artifacts/linux/$arch/$linux_base.AppImage" \
-              "downloads/Tidebreak-linux-${arch}.AppImage"
-            cp "release-artifacts/linux/$arch/$linux_base.deb" \
-              "downloads/Tidebreak-linux-${arch}.deb"
-            (cd downloads && sha256sum "Tidebreak-linux-${arch}.AppImage" \
-              > "Tidebreak-linux-${arch}.AppImage.sha256")
-            (cd downloads && sha256sum "Tidebreak-linux-${arch}.deb" \
-              > "Tidebreak-linux-${arch}.deb.sha256")
-          done
           fi
-
-          sbom="Tidebreak_${TIDEBREAK_VERSION}_source.spdx.json"
-          cp "release-artifacts/sbom/$sbom" "downloads/$sbom"
-          cp "release-artifacts/sbom/$sbom.sha256" "downloads/$sbom.sha256"
-          (cd downloads && sha256sum --check --strict "$sbom.sha256")
 
       # While Windows and Linux packaging is paused, the README's permanent
       # /releases/latest/download/ links keep serving the last builds that
@@ -2780,6 +2047,8 @@ jobs:
       # copied unchanged from the previous published release. Versioned
       # packages and updater signatures are not carried, so `latest.json`
       # advertises no Windows or Linux update and installed apps stay put.
+      # A repository with no earlier release, or one whose latest release
+      # never carried them, has nothing to carry.
       - name: Carry forward the paused Windows and Linux downloads
         if: >-
           ${{
@@ -2789,19 +2058,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          previous="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
-          [[ -n "$previous" && "$previous" != "$RELEASE_TAG" ]] || {
-            echo "No earlier published release to carry Windows and Linux downloads from." >&2
+          previous="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)"
+          if [[ -z "$previous" ]]; then
+            echo "::warning::No release is published yet, so this release ships macOS downloads only."
+            exit 0
+          fi
+          [[ "$previous" != "$RELEASE_TAG" ]] || {
+            echo "The draft $RELEASE_TAG is already the latest published release." >&2
             exit 1
           }
+          names=(
+            Tidebreak-windows-x86_64-setup.exe
+            Tidebreak-windows-aarch64-setup.exe
+            Tidebreak-linux-x86_64.AppImage
+            Tidebreak-linux-x86_64.deb
+            Tidebreak-linux-aarch64.AppImage
+            Tidebreak-linux-aarch64.deb
+          )
+          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$previous" --jq '[.assets[].name]')"
+          carried=0
+          for name in "${names[@]}"; do
+            if jq -e --arg name "$name" 'any(.[]; . == $name)' <<<"$assets" >/dev/null; then
+              carried=$((carried + 1))
+            fi
+          done
+          if (( carried == 0 )); then
+            echo "::warning::Release $previous carries no Windows or Linux downloads, so this release ships macOS downloads only."
+            exit 0
+          fi
           echo "Carrying Windows and Linux downloads forward from $previous."
-          for name in \
-            Tidebreak-windows-x86_64-setup.exe \
-            Tidebreak-windows-aarch64-setup.exe \
-            Tidebreak-linux-x86_64.AppImage \
-            Tidebreak-linux-x86_64.deb \
-            Tidebreak-linux-aarch64.AppImage \
-            Tidebreak-linux-aarch64.deb; do
+          for name in "${names[@]}"; do
             gh release download "$previous" \
               --repo "$GITHUB_REPOSITORY" \
               --dir downloads \
@@ -2836,18 +2122,29 @@ jobs:
             (cd downloads && sha256sum "$(basename "$compatibility_dmg")" \
               > "$(basename "$compatibility_dmg").sha256")
           fi
-          for required in \
-            downloads/Tidebreak-windows-x86_64-setup.exe \
-            downloads/Tidebreak-windows-aarch64-setup.exe \
-            downloads/Tidebreak-linux-x86_64.AppImage \
-            downloads/Tidebreak-linux-x86_64.deb \
-            downloads/Tidebreak-linux-aarch64.AppImage \
-            downloads/Tidebreak-linux-aarch64.deb; do
-            [[ -f "$required" ]] || {
-              echo "The cross-platform download was not prepared: ${required#downloads/}" >&2
-              exit 1
-            }
+
+          # The version-free Windows and Linux downloads travel together: all
+          # six, or none while their packaging is paused.
+          cross_platform=(
+            Tidebreak-windows-x86_64-setup.exe
+            Tidebreak-windows-aarch64-setup.exe
+            Tidebreak-linux-x86_64.AppImage
+            Tidebreak-linux-x86_64.deb
+            Tidebreak-linux-aarch64.AppImage
+            Tidebreak-linux-aarch64.deb
+          )
+          present=0
+          for name in "${cross_platform[@]}"; do
+            [[ ! -f "downloads/$name" ]] || present=$((present + 1))
           done
+          if [[ "$RELEASE_PLATFORMS" == all ]] || (( present > 0 )); then
+            for name in "${cross_platform[@]}"; do
+              [[ -f "downloads/$name" ]] || {
+                echo "The cross-platform download was not prepared: $name" >&2
+                exit 1
+              }
+            done
+          fi
 
           while IFS= read -r -d '' file; do
             case "$file" in
@@ -2862,45 +2159,68 @@ jobs:
             (cd downloads && sha256sum --check --strict "${checksum#downloads/}")
           done < <(find downloads -name '*.sha256' -type f -print0)
 
-          if [[ "${{ needs.validate.outputs.draft }}" != true \
-            && "${{ needs.inspect_hosted.outputs.exists }}" != true ]]; then
-            base="Tidebreak_${TIDEBREAK_VERSION}_universal"
-            for file in \
-              "$base.app.zip" \
-              "$base.app.tar.gz" \
-              "$base.app.tar.gz.sig" \
-              "Tidebreak_${TIDEBREAK_VERSION}_source.spdx.json"; do
-              [[ -f "downloads/$file" ]] || {
-                echo "Immutable release cannot recover hosted publication without $file." >&2
-                exit 1
-              }
-            done
-            if [[ "$RELEASE_PLATFORMS" == all ]]; then
-            for file in \
-              "Tidebreak_${TIDEBREAK_VERSION}_x86_64-setup.exe" \
-              "Tidebreak_${TIDEBREAK_VERSION}_x86_64-setup.exe.sig" \
-              "Tidebreak_${TIDEBREAK_VERSION}_x86_64.AppImage" \
-              "Tidebreak_${TIDEBREAK_VERSION}_x86_64.AppImage.sig" \
-              "Tidebreak_${TIDEBREAK_VERSION}_x86_64.deb" \
-              "Tidebreak_${TIDEBREAK_VERSION}_x86_64.deb.sig" \
-              "Tidebreak_${TIDEBREAK_VERSION}_aarch64-setup.exe" \
-              "Tidebreak_${TIDEBREAK_VERSION}_aarch64-setup.exe.sig" \
-              "Tidebreak_${TIDEBREAK_VERSION}_aarch64.AppImage" \
-              "Tidebreak_${TIDEBREAK_VERSION}_aarch64.AppImage.sig" \
-              "Tidebreak_${TIDEBREAK_VERSION}_aarch64.deb" \
-              "Tidebreak_${TIDEBREAK_VERSION}_aarch64.deb.sig"; do
-              [[ -f "downloads/$file" ]] || {
-                echo "Immutable release cannot recover hosted publication without $file." >&2
-                exit 1
-              }
-            done
-            fi
-          fi
+          # The feed must be exactly what the manifest describes, and every
+          # file the manifest names must ship with the release.
+          node scripts/prepare-published-release.mjs \
+            --manifest downloads/manifest.json \
+            --latest "$RUNNER_TEMP/expected-latest.json" \
+            --version "$TIDEBREAK_VERSION" \
+            --tag "$RELEASE_TAG" \
+            --sha "$RELEASE_SHA" \
+            --published-at "$(jq -er .published_at downloads/manifest.json)" \
+            --base-url "$RELEASE_BASE_URL" \
+            --platforms "$RELEASE_PLATFORMS" >/dev/null
+          cmp "$RUNNER_TEMP/expected-latest.json" downloads/latest.json
+          while IFS= read -r name; do
+            [[ -f "downloads/$name" ]] || {
+              echo "The release manifest names a file the release does not carry: $name" >&2
+              exit 1
+            }
+          done < <(jq -r '.artifacts[]
+            | .filename,
+              .checksum_filename,
+              (.signature_filename // empty),
+              (.signature_filename // empty | . + ".sha256")' \
+            downloads/manifest.json)
+          sbom="Tidebreak_${TIDEBREAK_VERSION}_source.spdx.json"
+          [[ -f "downloads/$sbom" ]] || {
+            echo "The release does not carry its source SBOM: $sbom" >&2
+            exit 1
+          }
 
-      # Version-free asset names give the README permanent one-click download
-      # links through GitHub's /releases/latest/download/ redirect. Assets are
-      # attached while the release is still a draft; immutable releases cannot
-      # be changed after the final publication step below.
+          # Every updater signature must verify against the public key that
+          # installed apps trust. A release signed with any other key would
+          # publish updates that every installed app rejects.
+          node scripts/verify-updater-signatures.mjs \
+            --config crates/tidebreak-desktop/tauri.conf.json \
+            downloads
+
+      # Attest only what this run built: the packages, signatures, checksums,
+      # manifests, and SBOM under dist. Version-free copies share their bytes
+      # with a versioned file, and carried-forward downloads keep the
+      # attestation of the release that built them.
+      - name: Prepare provenance attestation subjects
+        if: ${{ needs.validate.outputs.draft == 'true' }}
+        run: |
+          (cd dist && find . -type f -print0 | sort -z | xargs -0 sha256sum) \
+            > "$RUNNER_TEMP/immutable-release-files.sha256"
+
+      # GitHub artifact attestations are free for public repositories, and a
+      # public release fails closed if its provenance cannot be recorded.
+      # Private repositories need Enterprise Cloud for them, so a private
+      # copy of this repository skips the step.
+      - name: Attest immutable release provenance
+        if: >-
+          ${{
+            needs.validate.outputs.draft == 'true'
+            && github.event.repository.visibility == 'public'
+          }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: ${{ runner.temp }}/immutable-release-files.sha256
+
+      # Assets are attached while the release is still a draft; immutable
+      # releases cannot be changed after the final publication step below.
       - name: Attach or verify the GitHub Release downloads
         env:
           RELEASE_DRAFT: ${{ needs.validate.outputs.draft }}
@@ -2944,7 +2264,7 @@ jobs:
 
   finalize_release:
     name: publish immutable GitHub Release
-    needs: [validate, attach_downloads]
+    needs: [validate, build_macos, attach_downloads]
     if: >-
       ${{
         always()
@@ -2969,6 +2289,7 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
+          MACOS_SIGNING: ${{ needs.build_macos.outputs.signing }}
           RELEASE_DRAFT: ${{ needs.validate.outputs.draft }}
           RELEASE_ID: ${{ needs.validate.outputs.release_id }}
           RELEASE_SHA: ${{ needs.validate.outputs.sha }}
@@ -2984,7 +2305,25 @@ jobs:
 
           if [[ "$RELEASE_DRAFT" = true ]]; then
             snapshot="$RUNNER_TEMP/release-snapshot/release-snapshot.json"
-            jq '. + {draft: false, prerelease: false, make_latest: "true"}' "$snapshot" | gh api \
+            # Without Apple signing the macOS build is ad-hoc signed, and
+            # people need to know how to open it before they download it.
+            note=""
+            if [[ "$MACOS_SIGNING" = adhoc ]]; then
+              note="$(cat <<'NOTE'
+          ## Opening the macOS build
+
+          This macOS build is ad-hoc signed and not notarized by Apple, so macOS blocks it the first time you open it. To open it, choose **Open Anyway** in System Settings > Privacy & Security, or run `xattr -dr com.apple.quarantine /Applications/Tidebreak.app` in Terminal. Each update carries a new ad-hoc signature, so macOS may ask you again to grant Accessibility and Screen Recording and to allow keychain access.
+          NOTE
+              )"
+            elif [[ "$MACOS_SIGNING" != developer-id ]]; then
+              echo "The macOS build reported no signing mode." >&2
+              exit 1
+            fi
+            jq --arg note "$note" \
+              '. + {draft: false, prerelease: false, make_latest: "true"}
+                | if $note == "" then .
+                  else .body = ((.body // "" | sub("\\s+$"; "")) + "\n\n" + $note + "\n")
+                  end' "$snapshot" | gh api \
               --method PATCH \
               "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
               --input - >/dev/null
@@ -3022,8 +2361,12 @@ jobs:
           # one of the two exceptions to that rule, so dispatch it explicitly.
           # The release trigger stays declared for a release someone publishes
           # by hand in the UI, which carries a user token and does fire.
-          gh workflow run publish-server-image.yml \
-            --repo "$GITHUB_REPOSITORY" --ref main --field "release_tag=$RELEASE_TAG"
+          # The release is already public here, so a disabled image workflow
+          # warns instead of failing the run or skipping the draft refresh.
+          if ! gh workflow run publish-server-image.yml \
+            --repo "$GITHUB_REPOSITORY" --ref main --field "release_tag=$RELEASE_TAG"; then
+            echo "::warning::Could not start Publish server image for $RELEASE_TAG. Enable that workflow, then run it with release_tag=$RELEASE_TAG."
+          fi
 
       - name: Refresh the next release draft
         if: ${{ needs.validate.outputs.draft == 'true' }}
@@ -3034,4 +2377,6 @@ jobs:
           # during the build, Release Drafter already created one while the
           # release was a prerelease; this call is idempotent and just ensures
           # a draft exists even when the build was quiet.
-          gh workflow run release-draft.yml --repo "$GITHUB_REPOSITORY" --ref main --field update-draft=true
+          if ! gh workflow run release-draft.yml --repo "$GITHUB_REPOSITORY" --ref main --field update-draft=true; then
+            echo "::warning::Could not start Release draft. Enable that workflow; the next push to main refreshes the draft too."
+          fi

@@ -2,7 +2,7 @@
 
 The user documentation for Tidebreak. It is a Fumadocs site on the Next.js App
 Router, built as a static export and published at
-<https://www.tidebreak.io/docs/>.
+<https://naingthet.github.io/tidebreak/docs/>.
 
 ## Documentation boundaries
 
@@ -11,9 +11,6 @@ Router, built as a static export and published at
   contributor entry point; it should link here instead of reproducing guides.
 - [`docs/`](../docs) holds maintainer architecture, contracts, operations,
   plans, and decision records.
-- Product positioning and launch copy belong to the separate
-  [`brightwave-inc/tidebreak-site`](https://github.com/brightwave-inc/tidebreak-site)
-  marketing repository.
 
 When a subject matters to both users and maintainers, write each page for its
 audience and link across the boundary. Do not keep two near-identical versions
@@ -44,8 +41,8 @@ Useful scripts:
 
 `pnpm build` emits the static Fumadocs search index at `/api/search/` alongside
 the exported pages. A post-build step also emits `/search-index.json` as a
-small compatibility manifest for the established release artifact and health
-checks; the site itself does not query that legacy file.
+small compatibility manifest that the publish workflow checks for; the site
+itself does not query that file.
 
 `pnpm types:check` type-checks against the route types Next generates under
 `.next/`, so run `pnpm dev` or `pnpm build` at least once in a fresh clone
@@ -63,27 +60,27 @@ before it will pass.
 
 ## Serving under a subpath
 
-This site is meant to be served under a path on the marketing site rather than
-at the root of its own origin, so it must be built with `BASE_PATH` set to that
+GitHub Pages serves this repository under `/tidebreak/`, and the site lives at
+`/tidebreak/docs/` there, so it must be built with `BASE_PATH` set to that
 path:
 
 ```sh
-BASE_PATH=/docs pnpm build
+BASE_PATH=/tidebreak/docs pnpm build
 ```
 
 `next.config.mjs` passes `BASE_PATH` through to Next's `basePath`, which
 rewrites asset URLs, `next/link` hrefs, and the search-index fetch. Leave it
 unset for local development. See `.env.example`.
 
-The release workflow deploys this export to the dedicated documentation
-project, then the marketing project serves it under
-`https://www.tidebreak.io/docs/`. Canonical metadata and the sitemap point at
-that public path so the raw deployment origin is not indexed as a separate
-site.
+The `Publish documentation` workflow
+([`.github/workflows/docs.yml`](../.github/workflows/docs.yml)) builds this
+export on every push to `main` that touches the site, places it under `docs/`
+in the Pages artifact, and deploys it to
+`https://naingthet.github.io/tidebreak/docs/`. Canonical metadata and the
+sitemap point at that path.
 
 ## Design tokens
 
-`src/app/global.css` maps Fumadocs' surface tokens onto the marketing site's
-Geist typography, cool neutral ramp, restrained brand blue, and light/dark
-surface system. Keep those tokens aligned with
-`tidebreak-site/src/styles/globals.css` when the public brand changes.
+`src/app/global.css` maps Fumadocs' surface tokens onto Tidebreak's Geist
+typography, cool neutral ramp, restrained brand blue, and light/dark surface
+system.

@@ -8024,7 +8024,7 @@
           },
           "subscription_label": {
             "description": "That binding's label, as shown on the account page. Null when the\nbinding has since been deleted or none was involved.",
-            "example": "thet@brightwave.io",
+            "example": "person@example.com",
             "type": [
               "string",
               "null"

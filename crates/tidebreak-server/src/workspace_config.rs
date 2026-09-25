@@ -741,14 +741,14 @@ mod tests {
     fn sample_repo() -> ExportedCodeRepository {
         ExportedCodeRepository {
             display_name: "tidebreak".into(),
-            origin_url: Some("https://github.com/brightwave-inc/tidebreak.git".into()),
+            origin_url: Some("https://github.com/octo-org/tidebreak.git".into()),
             root_path: "/tmp/does-not-exist-tidebreak-config".into(),
             default_base_ref: "main".into(),
             branch_prefix: "tidebreak/".into(),
             setup_script: None,
             archive_script: None,
             quick_actions: vec![],
-            cloned_from: Some("https://github.com/brightwave-inc/tidebreak.git".into()),
+            cloned_from: Some("https://github.com/octo-org/tidebreak.git".into()),
         }
     }
 
@@ -903,7 +903,7 @@ mod tests {
             quick_actions: vec![],
             created_at: chrono::Utc::now(),
             removed_at: None,
-            cloned_from: Some("https://github.com/brightwave-inc/tidebreak.git".into()),
+            cloned_from: Some("https://github.com/octo-org/tidebreak.git".into()),
             origin_host: None,
             origin_owner: None,
             origin_name: None,

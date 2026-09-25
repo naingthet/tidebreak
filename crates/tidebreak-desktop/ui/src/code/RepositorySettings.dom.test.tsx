@@ -62,7 +62,7 @@ describe("RepositorySettings", () => {
       <RepositorySettings
         client={client}
         repoId="repo-1"
-        repoLabel="brightwave-inc/tidebreak"
+        repoLabel="octo-org/tidebreak"
       />,
     );
 
@@ -97,7 +97,7 @@ describe("RepositorySettings", () => {
       <RepositorySettings
         client={client}
         repoId="repo-1"
-        repoLabel="brightwave-inc/tidebreak"
+        repoLabel="octo-org/tidebreak"
       />,
     );
 
@@ -134,7 +134,7 @@ describe("RepositorySettings", () => {
       <RepositorySettings
         client={client}
         repoId="repo-1"
-        repoLabel="brightwave-inc/tidebreak"
+        repoLabel="octo-org/tidebreak"
       />,
     );
 
@@ -154,7 +154,7 @@ describe("RepositorySettings", () => {
       <RepositorySettings
         client={client}
         repoId={null}
-        repoLabel="brightwave-inc/tidebreak"
+        repoLabel="octo-org/tidebreak"
       />,
     );
 
@@ -190,7 +190,7 @@ describe("RepositorySettings", () => {
       <RepositorySettings
         client={client}
         repoId="repo-1"
-        repoLabel="brightwave-inc/tidebreak"
+        repoLabel="octo-org/tidebreak"
       />,
     );
 

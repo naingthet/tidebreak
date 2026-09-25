@@ -11,10 +11,10 @@ import { RepositoryTriggerRules } from "@/code/RepositoryTriggerRules";
 
 const repository: CodeGitHubRepositoryRef = {
   host: "github.com",
-  owner: "brightwave-inc",
+  owner: "octo-org",
   name: "tidebreak",
-  name_with_owner: "brightwave-inc/tidebreak",
-  url: "https://github.com/brightwave-inc/tidebreak",
+  name_with_owner: "octo-org/tidebreak",
+  url: "https://github.com/octo-org/tidebreak",
   tidebreak_repo_id: "repo-storybook",
 };
 

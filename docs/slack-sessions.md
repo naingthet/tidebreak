@@ -196,8 +196,8 @@ A Slack app has one event URL. Hosted machines are per-person
 principals on many machines, and it is a multi-tenant credential
 custodian. Design and operate it as one.
 
-Deployment: the adapter runs as a gateway add-on, the same pattern
-Shipright uses — not a new service class. It is self-hostable, so an
+Deployment: the adapter runs as a gateway add-on, the same pattern as
+the gateway's other add-ons — not a new service class. It is self-hostable, so an
 organization can run its own Slack app against its own machines; the
 hosted instance is a convenience, not the only path.
 

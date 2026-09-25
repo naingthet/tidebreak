@@ -117,7 +117,7 @@ fn attention() -> Attention {
 fn pull_request() -> PullRequestDigest {
     PullRequestDigest {
         number: 3006,
-        url: Some("https://github.com/brightwave-inc/tidebreak/pull/3006".to_owned()),
+        url: Some("https://github.com/octo-org/tidebreak/pull/3006".to_owned()),
         state: "open".to_owned(),
         title: Some("refactor(cli): decode the chat event socket".to_owned()),
         checks_summary: Some("3 pending".to_owned()),
@@ -425,7 +425,7 @@ pub(crate) fn code_frame_fixtures() -> Vec<Fixture> {
                 base_refresh_warning: None,
                 id: workspace_id(),
                 repo_id: repo_id(),
-                repo_display_name: Some("brightwave-inc/tidebreak".to_owned()),
+                repo_display_name: Some("octo-org/tidebreak".to_owned()),
                 title: "Bound the code parser".to_owned(),
                 worktree_path: "/Users/mara/code/tidebreak/.tidebreak/wt-2".to_owned(),
                 branch_name: "mara/code-parsers-bounded".to_owned(),

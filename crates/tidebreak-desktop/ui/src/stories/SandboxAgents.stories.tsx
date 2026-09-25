@@ -41,7 +41,7 @@ const liveAgents: SandboxAgent[] = [
     "running",
     "Refactor the settings panel to use the new token system",
     {
-      repositoryUrl: "https://github.com/brightwave-inc/tidebreak",
+      repositoryUrl: "https://github.com/octo-org/tidebreak",
       repositoryRef: "feat/settings-tokens",
       elapsedLabel: "4m 12s",
       spendMicroUsd: 89_000,
@@ -53,7 +53,7 @@ const liveAgents: SandboxAgent[] = [
     "running",
     "Add integration tests for the webhook handler",
     {
-      repositoryUrl: "https://github.com/brightwave-inc/model-gateway",
+      repositoryUrl: "https://github.com/octo-org/model-gateway",
       repositoryRef: "main",
       elapsedLabel: "1m 48s",
       spendMicroUsd: 32_000,
@@ -75,7 +75,7 @@ const mixedAgents: SandboxAgent[] = [
     "running",
     "Audit the permission model for connected apps",
     {
-      repositoryUrl: "https://github.com/brightwave-inc/tidebreak",
+      repositoryUrl: "https://github.com/octo-org/tidebreak",
       repositoryRef: "main",
       elapsedLabel: "6m 30s",
       spendMicroUsd: 142_000,
@@ -117,7 +117,7 @@ const singleRunning: SandboxAgent[] = [
     "running",
     "Ship the sandbox agents sidebar section",
     {
-      repositoryUrl: "https://github.com/brightwave-inc/tidebreak",
+      repositoryUrl: "https://github.com/octo-org/tidebreak",
       repositoryRef: "feat/sandbox-ui",
       elapsedLabel: "2m 05s",
       spendMicroUsd: 55_000,

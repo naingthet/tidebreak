@@ -64,10 +64,10 @@ const DELIVERY_CAPABILITY = {
 
 const DELIVERY_REPOSITORY = {
   host: "github.com",
-  owner: "brightwave-inc",
+  owner: "octo-org",
   name: "tidebreak",
-  name_with_owner: "brightwave-inc/tidebreak",
-  url: "https://github.com/brightwave-inc/tidebreak",
+  name_with_owner: "octo-org/tidebreak",
+  url: "https://github.com/octo-org/tidebreak",
   default_branch: "main",
   tidebreak_repo_id: "repo-1",
 };
@@ -82,10 +82,10 @@ const DELIVERY_WORKSPACE_LINK = {
 };
 
 const DELIVERY_PR = {
-  id: "github.com/brightwave-inc/tidebreak#2248",
+  id: "github.com/octo-org/tidebreak#2248",
   repository: DELIVERY_REPOSITORY,
   number: 2248,
-  url: "https://github.com/brightwave-inc/tidebreak/pull/2248",
+  url: "https://github.com/octo-org/tidebreak/pull/2248",
   title: "Build the delivery center",
   state: "open",
   draft: false,
@@ -105,7 +105,7 @@ const DELIVERY_PR = {
       name: "desktop / storybook",
       bucket: "fail",
       detail: "completed",
-      url: "https://github.com/brightwave-inc/tidebreak/actions/runs/77",
+      url: "https://github.com/octo-org/tidebreak/actions/runs/77",
       workflow_run_id: 77,
     },
   ],
@@ -119,9 +119,9 @@ const DELIVERY_PR = {
 
 const DELIVERY_MERGED_PR = {
   ...DELIVERY_PR,
-  id: "github.com/brightwave-inc/tidebreak#2240",
+  id: "github.com/octo-org/tidebreak#2240",
   number: 2240,
-  url: "https://github.com/brightwave-inc/tidebreak/pull/2240",
+  url: "https://github.com/octo-org/tidebreak/pull/2240",
   state: "merged",
   review_decision: undefined,
   attention_reasons: [],
@@ -130,13 +130,13 @@ const DELIVERY_MERGED_PR = {
 };
 
 const DELIVERY_RUN = {
-  id: "github.com/brightwave-inc/tidebreak:workflow_run:77",
+  id: "github.com/octo-org/tidebreak:workflow_run:77",
   repository: DELIVERY_REPOSITORY,
   kind: "workflow_run",
   github_id: 77,
   run_attempt: 2,
   name: "Desktop CI",
-  url: "https://github.com/brightwave-inc/tidebreak/actions/runs/77",
+  url: "https://github.com/octo-org/tidebreak/actions/runs/77",
   status: "completed",
   conclusion: "failure",
   workflow: "Desktop CI",
@@ -1644,7 +1644,7 @@ describe("code delivery wire parsers", () => {
         {
           repository: {
             host: "github.com",
-            owner: "brightwave-inc",
+            owner: "octo-org",
             name: "private-repo",
           },
           kind: "forbidden",
@@ -1697,7 +1697,7 @@ describe("code delivery wire parsers", () => {
           kind: "inline",
           id: "comment-1",
           author: "devon",
-          url: "https://github.com/brightwave-inc/tidebreak/pull/2248#discussion_r1",
+          url: "https://github.com/octo-org/tidebreak/pull/2248#discussion_r1",
           created_at: "2026-08-20T12:07:00.000Z",
           body: "Keep this state visible at narrow widths.",
           path: "src/code/CodeDeliveryPage.tsx",
@@ -1708,7 +1708,7 @@ describe("code delivery wire parsers", () => {
         {
           repository: {
             host: "github.com",
-            owner: "brightwave-inc",
+            owner: "octo-org",
             name: "tidebreak",
           },
           kind: "transient",
@@ -1744,11 +1744,11 @@ describe("code delivery wire parsers", () => {
   it("accepts run pages and details for Actions and deployments", () => {
     const deployment = {
       ...DELIVERY_RUN,
-      id: "github.com/brightwave-inc/tidebreak:deployment:91",
+      id: "github.com/octo-org/tidebreak:deployment:91",
       kind: "deployment",
       github_id: 91,
       name: "Production",
-      url: "https://github.com/brightwave-inc/tidebreak/deployments/activity_log?environment=production",
+      url: "https://github.com/octo-org/tidebreak/deployments/activity_log?environment=production",
       status: "failure",
       environment: "production",
       attention_reasons: ["failure"],
@@ -1767,7 +1767,7 @@ describe("code delivery wire parsers", () => {
           name: "storybook",
           status: "completed",
           conclusion: "failure",
-          url: "https://github.com/brightwave-inc/tidebreak/actions/runs/77/job/801",
+          url: "https://github.com/octo-org/tidebreak/actions/runs/77/job/801",
           started_at: "2026-08-20T11:02:00.000Z",
           completed_at: "2026-08-20T11:08:00.000Z",
           failed_steps: ["Build Storybook"],
@@ -1779,8 +1779,7 @@ describe("code delivery wire parsers", () => {
           state: "failure",
           description: "Production health check failed.",
           environment_url: "https://tidebreak.example.com",
-          log_url:
-            "https://github.com/brightwave-inc/tidebreak/actions/runs/77",
+          log_url: "https://github.com/octo-org/tidebreak/actions/runs/77",
           created_at: "2026-08-20T12:04:00.000Z",
         },
       ],
@@ -1788,7 +1787,7 @@ describe("code delivery wire parsers", () => {
         {
           repository: {
             host: "github.com",
-            owner: "brightwave-inc",
+            owner: "octo-org",
             name: "tidebreak",
           },
           kind: "truncated",
@@ -1824,7 +1823,7 @@ describe("code delivery wire parsers", () => {
             id: 801,
             name: "storybook",
             status: "completed",
-            url: "https://github.com/brightwave-inc/tidebreak/actions/runs/77/job/801",
+            url: "https://github.com/octo-org/tidebreak/actions/runs/77/job/801",
             started_at: null,
             completed_at: null,
             failed_steps: [7],
@@ -2310,9 +2309,9 @@ describe("code frames against real server output", () => {
     expect(
       parseCodeWorkspace({
         ...workspace,
-        repo_display_name: "brightwave-inc/tidebreak",
+        repo_display_name: "octo-org/tidebreak",
       })?.repo_display_name,
-    ).toBe("brightwave-inc/tidebreak");
+    ).toBe("octo-org/tidebreak");
     for (const repo_display_name of [
       42,
       "",

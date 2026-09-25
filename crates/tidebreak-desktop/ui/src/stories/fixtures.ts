@@ -544,7 +544,7 @@ export const codeWorkspace: CodeWorkspaceSnapshot = {
 export const codeRepositories: CodeRepoSnapshot[] = [
   {
     id: "repo-tidebreak",
-    root_path: "/Users/sam/src/brightwave/tidebreak",
+    root_path: "/Users/sam/src/octo-org/tidebreak",
     display_name: "tidebreak",
     default_base_ref: "main",
     branch_prefix: "thet",
@@ -563,7 +563,7 @@ export const codeRepositories: CodeRepoSnapshot[] = [
   {
     id: "repo-design-system",
     root_path:
-      "/Users/sam/src/brightwave/product-foundations/design-system-components",
+      "/Users/sam/src/octo-org/product-foundations/design-system-components",
     display_name: "design-system-components",
     default_base_ref: "main",
     branch_prefix: "thet",
@@ -603,7 +603,7 @@ export const codeSidebarWorkspaces: CodeWorkspaceSnapshot[] = [
     created_at: "2026-08-24T12:20:00.000Z",
     pr: {
       number: 2314,
-      url: "https://github.com/brightwave-inc/tidebreak/pull/2314",
+      url: "https://github.com/octo-org/tidebreak/pull/2314",
       state: "open",
       title: "Make browser recovery clear",
       review_decision: "changes_requested",
@@ -619,7 +619,7 @@ export const codeSidebarWorkspaces: CodeWorkspaceSnapshot[] = [
     created_at: "2026-08-24T11:05:00.000Z",
     pr: {
       number: 2311,
-      url: "https://github.com/brightwave-inc/tidebreak/pull/2311",
+      url: "https://github.com/octo-org/tidebreak/pull/2311",
       state: "open",
       title: "Clarify delivery density",
       review_decision: "approved",
@@ -1284,7 +1284,7 @@ function homePr(
 ): PullRequestDigest {
   return {
     number,
-    url: `https://github.com/brightwave-inc/${repo}/pull/${number}`,
+    url: `https://github.com/octo-org/${repo}/pull/${number}`,
     state: "open",
     title,
     ...overrides,
@@ -1578,29 +1578,29 @@ export const deliveryCodeRepo: CodeRepoSnapshot = {
 
 export const deliveryRepository: CodeGitHubRepositoryRef = {
   host: "github.com",
-  owner: "brightwave-inc",
+  owner: "octo-org",
   name: "tidebreak",
-  name_with_owner: "brightwave-inc/tidebreak",
-  url: "https://github.com/brightwave-inc/tidebreak",
+  name_with_owner: "octo-org/tidebreak",
+  url: "https://github.com/octo-org/tidebreak",
   default_branch: "main",
   tidebreak_repo_id: deliveryCodeRepo.id,
 };
 
 export const deliveryDocsRepository: CodeGitHubRepositoryRef = {
   host: "github.com",
-  owner: "brightwave-inc",
+  owner: "octo-org",
   name: "docs",
-  name_with_owner: "brightwave-inc/docs",
-  url: "https://github.com/brightwave-inc/docs",
+  name_with_owner: "octo-org/docs",
+  url: "https://github.com/octo-org/docs",
   default_branch: "main",
 };
 
 export const deliveryGatewayRepository: CodeGitHubRepositoryRef = {
   host: "github.com",
-  owner: "brightwave-inc",
+  owner: "octo-org",
   name: "model-gateway",
-  name_with_owner: "brightwave-inc/model-gateway",
-  url: "https://github.com/brightwave-inc/model-gateway",
+  name_with_owner: "octo-org/model-gateway",
+  url: "https://github.com/octo-org/model-gateway",
   default_branch: "main",
 };
 
@@ -1641,7 +1641,7 @@ export const deliveryWorkspaces: CodeWorkspaceSnapshot[] = [
     created_at: "2026-08-19T14:00:00.000Z",
     pr: {
       number: 2251,
-      url: "https://github.com/brightwave-inc/tidebreak/pull/2251",
+      url: "https://github.com/octo-org/tidebreak/pull/2251",
       state: "open",
       title: "Build the delivery center",
       head_branch: deliveryWorkspaceLink.branch_name,
@@ -1665,7 +1665,7 @@ export const deliveryWorkspaces: CodeWorkspaceSnapshot[] = [
     status: "released",
     pr: {
       number: 2194,
-      url: "https://github.com/brightwave-inc/tidebreak/pull/2194",
+      url: "https://github.com/octo-org/tidebreak/pull/2194",
       state: "merged",
       title: "Add workspace search",
     },
@@ -1699,10 +1699,10 @@ export const deliveryWorkspaces: CodeWorkspaceSnapshot[] = [
  */
 export const stackedDeliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
   {
-    id: "github.com/brightwave-inc/tidebreak#2301",
+    id: "github.com/octo-org/tidebreak#2301",
     repository: deliveryRepository,
     number: 2301,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2301",
+    url: "https://github.com/octo-org/tidebreak/pull/2301",
     title: "Stack base: extract the fact store",
     state: "open",
     draft: false,
@@ -1724,10 +1724,10 @@ export const stackedDeliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     updated_at: "2026-08-21T15:00:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/tidebreak#2302",
+    id: "github.com/octo-org/tidebreak#2302",
     repository: deliveryRepository,
     number: 2302,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2302",
+    url: "https://github.com/octo-org/tidebreak/pull/2302",
     title: "Stack middle: reconcile sweep",
     state: "open",
     draft: false,
@@ -1750,10 +1750,10 @@ export const stackedDeliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     updated_at: "2026-08-21T14:00:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/tidebreak#2303",
+    id: "github.com/octo-org/tidebreak#2303",
     repository: deliveryRepository,
     number: 2303,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2303",
+    url: "https://github.com/octo-org/tidebreak/pull/2303",
     title: "Stack tip: lanes in the delivery page",
     state: "open",
     draft: true,
@@ -1774,10 +1774,10 @@ export const stackedDeliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     updated_at: "2026-08-21T13:00:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/tidebreak#2290",
+    id: "github.com/octo-org/tidebreak#2290",
     repository: deliveryRepository,
     number: 2290,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2290",
+    url: "https://github.com/octo-org/tidebreak/pull/2290",
     title: "Orphan child: parent merged away",
     state: "open",
     draft: false,
@@ -1806,10 +1806,10 @@ export const stackedDeliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
 export const unregisteredDeliveryPullRequests: CodeDeliveryPullRequestSummary[] =
   [
     {
-      id: "github.com/brightwave-inc/tidebreak#2310",
+      id: "github.com/octo-org/tidebreak#2310",
       repository: deliveryRepository,
       number: 2310,
-      url: "https://github.com/brightwave-inc/tidebreak/pull/2310",
+      url: "https://github.com/octo-org/tidebreak/pull/2310",
       title: "Unregistered base: land the schema",
       state: "open",
       draft: false,
@@ -1830,10 +1830,10 @@ export const unregisteredDeliveryPullRequests: CodeDeliveryPullRequestSummary[] 
       updated_at: "2026-08-21T15:00:00.000Z",
     },
     {
-      id: "github.com/brightwave-inc/tidebreak#2311",
+      id: "github.com/octo-org/tidebreak#2311",
       repository: deliveryRepository,
       number: 2311,
-      url: "https://github.com/brightwave-inc/tidebreak/pull/2311",
+      url: "https://github.com/octo-org/tidebreak/pull/2311",
       title: "Unregistered middle: the queries",
       state: "open",
       draft: false,
@@ -1855,10 +1855,10 @@ export const unregisteredDeliveryPullRequests: CodeDeliveryPullRequestSummary[] 
       updated_at: "2026-08-21T14:00:00.000Z",
     },
     {
-      id: "github.com/brightwave-inc/tidebreak#2312",
+      id: "github.com/octo-org/tidebreak#2312",
       repository: deliveryRepository,
       number: 2312,
-      url: "https://github.com/brightwave-inc/tidebreak/pull/2312",
+      url: "https://github.com/octo-org/tidebreak/pull/2312",
       title: "Unregistered tip: the migration",
       state: "open",
       draft: false,
@@ -1883,10 +1883,10 @@ export const unregisteredDeliveryPullRequests: CodeDeliveryPullRequestSummary[] 
 
 export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
   {
-    id: "github.com/brightwave-inc/tidebreak#2251",
+    id: "github.com/octo-org/tidebreak#2251",
     repository: deliveryRepository,
     number: 2251,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2251",
+    url: "https://github.com/octo-org/tidebreak/pull/2251",
     title: "Build the delivery center",
     state: "open",
     draft: false,
@@ -1905,7 +1905,7 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
         name: "desktop / storybook",
         bucket: "fail",
         detail: "Build failed",
-        url: "https://github.com/brightwave-inc/tidebreak/actions/runs/4401",
+        url: "https://github.com/octo-org/tidebreak/actions/runs/4401",
         workflow_run_id: 4401,
       },
     ],
@@ -1917,10 +1917,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     updated_at: "2026-08-20T15:08:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/tidebreak#2247",
+    id: "github.com/octo-org/tidebreak#2247",
     repository: deliveryRepository,
     number: 2247,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2247",
+    url: "https://github.com/octo-org/tidebreak/pull/2247",
     title: "Make workspace deep links durable",
     state: "open",
     draft: false,
@@ -1947,10 +1947,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
   // A merged pull request. Its review decision is empty, which is exactly the
   // shape that used to render as "Review Pending" in the list.
   {
-    id: "github.com/brightwave-inc/tidebreak#2240",
+    id: "github.com/octo-org/tidebreak#2240",
     repository: deliveryRepository,
     number: 2240,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2240",
+    url: "https://github.com/octo-org/tidebreak/pull/2240",
     title: "Cache the workspace digest between polls",
     state: "merged",
     draft: false,
@@ -1977,10 +1977,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
   },
   // Closed without merging: same empty review decision, different outcome.
   {
-    id: "github.com/brightwave-inc/docs#309",
+    id: "github.com/octo-org/docs#309",
     repository: deliveryDocsRepository,
     number: 309,
-    url: "https://github.com/brightwave-inc/docs/pull/309",
+    url: "https://github.com/octo-org/docs/pull/309",
     title: "Rewrite the deployment runbook",
     state: "closed",
     draft: false,
@@ -2001,10 +2001,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
   },
   // Merged, but the host still reports CLOSED. Only `merged_at` separates it.
   {
-    id: "github.com/brightwave-inc/tidebreak#2233",
+    id: "github.com/octo-org/tidebreak#2233",
     repository: deliveryRepository,
     number: 2233,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2233",
+    url: "https://github.com/octo-org/tidebreak/pull/2233",
     title: "Split the workspace route",
     state: "closed",
     draft: false,
@@ -2025,10 +2025,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     closed_at: "2026-08-15T16:02:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/docs#311",
+    id: "github.com/octo-org/docs#311",
     repository: deliveryDocsRepository,
     number: 311,
-    url: "https://github.com/brightwave-inc/docs/pull/311",
+    url: "https://github.com/octo-org/docs/pull/311",
     title: "Document managed deployments",
     state: "open",
     draft: true,
@@ -2048,10 +2048,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
   },
   // Conflicting: the merge button explains itself instead of failing at the API.
   {
-    id: "github.com/brightwave-inc/tidebreak#2229",
+    id: "github.com/octo-org/tidebreak#2229",
     repository: deliveryRepository,
     number: 2229,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2229",
+    url: "https://github.com/octo-org/tidebreak/pull/2229",
     title: "Adopt the shared status tone map",
     state: "open",
     draft: false,
@@ -2076,10 +2076,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     updated_at: "2026-08-20T09:58:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/model-gateway#1370",
+    id: "github.com/octo-org/model-gateway#1370",
     repository: deliveryGatewayRepository,
     number: 1370,
-    url: "https://github.com/brightwave-inc/model-gateway/pull/1370",
+    url: "https://github.com/octo-org/model-gateway/pull/1370",
     title: "Ask a hosted MCP server which scopes it accepts",
     state: "open",
     draft: false,
@@ -2108,10 +2108,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     updated_at: "2026-08-24T21:47:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/tidebreak#2258",
+    id: "github.com/octo-org/tidebreak#2258",
     repository: deliveryRepository,
     number: 2258,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2258",
+    url: "https://github.com/octo-org/tidebreak/pull/2258",
     title: "Apply reasoning effort changes to the next turn",
     state: "open",
     draft: false,
@@ -2136,10 +2136,10 @@ export const deliveryPullRequests: CodeDeliveryPullRequestSummary[] = [
     updated_at: "2026-08-24T21:44:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/model-gateway#1369",
+    id: "github.com/octo-org/model-gateway#1369",
     repository: deliveryGatewayRepository,
     number: 1369,
-    url: "https://github.com/brightwave-inc/model-gateway/pull/1369",
+    url: "https://github.com/octo-org/model-gateway/pull/1369",
     title: "Let the catalog say which scopes a server accepts",
     state: "open",
     draft: false,
@@ -2250,7 +2250,7 @@ export const deliveryPullRequestDetails: Record<
         author: "devon",
         created_at: "2026-08-20T14:48:00.000Z",
         review_state: "changes_requested",
-        url: "https://github.com/brightwave-inc/tidebreak/pull/2251#pullrequestreview-1",
+        url: "https://github.com/octo-org/tidebreak/pull/2251#pullrequestreview-1",
         body: [
           "The narrow detail state still needs a pass. Two things:",
           "",
@@ -2273,7 +2273,7 @@ export const deliveryPullRequestDetails: Record<
         author: "mara",
         created_at: "2026-08-20T15:26:00.000Z",
         review_state: "commented",
-        url: "https://github.com/brightwave-inc/tidebreak/pull/2251#pullrequestreview-2",
+        url: "https://github.com/octo-org/tidebreak/pull/2251#pullrequestreview-2",
         body: [
           "The lifecycle helper reads better as a lookup. Something like:",
           "",
@@ -2585,13 +2585,13 @@ export const deliveryPullRequestDetails: Record<
 
 export const deliveryRuns: CodeDeliveryRunSummary[] = [
   {
-    id: "github.com/brightwave-inc/tidebreak:workflow_run:4401",
+    id: "github.com/octo-org/tidebreak:workflow_run:4401",
     repository: deliveryRepository,
     kind: "workflow_run",
     github_id: 4401,
     run_attempt: 2,
     name: "Desktop CI",
-    url: "https://github.com/brightwave-inc/tidebreak/actions/runs/4401",
+    url: "https://github.com/octo-org/tidebreak/actions/runs/4401",
     status: "completed",
     conclusion: "failure",
     workflow: "Desktop CI",
@@ -2605,12 +2605,12 @@ export const deliveryRuns: CodeDeliveryRunSummary[] = [
     updated_at: "2026-08-20T15:11:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/tidebreak:deployment:901",
+    id: "github.com/octo-org/tidebreak:deployment:901",
     repository: deliveryRepository,
     kind: "deployment",
     github_id: 901,
     name: "Production",
-    url: "https://github.com/brightwave-inc/tidebreak/deployments/activity_log?environment=production",
+    url: "https://github.com/octo-org/tidebreak/deployments/activity_log?environment=production",
     status: "success",
     conclusion: "success",
     environment: "production",
@@ -2623,12 +2623,12 @@ export const deliveryRuns: CodeDeliveryRunSummary[] = [
     updated_at: "2026-08-20T13:29:00.000Z",
   },
   {
-    id: "github.com/brightwave-inc/docs:workflow_run:981",
+    id: "github.com/octo-org/docs:workflow_run:981",
     repository: deliveryDocsRepository,
     kind: "workflow_run",
     github_id: 981,
     name: "Docs preview",
-    url: "https://github.com/brightwave-inc/docs/actions/runs/981",
+    url: "https://github.com/octo-org/docs/actions/runs/981",
     status: "in_progress",
     workflow: "Docs preview",
     branch: "ines/managed-deployments",
@@ -2650,7 +2650,7 @@ export const deliveryRunDetails: Record<number, CodeDeliveryRunDetail> = {
         name: "Focused tests",
         status: "completed",
         conclusion: "success",
-        url: "https://github.com/brightwave-inc/tidebreak/actions/runs/4401/job/7101",
+        url: "https://github.com/octo-org/tidebreak/actions/runs/4401/job/7101",
         started_at: "2026-08-20T14:56:00.000Z",
         completed_at: "2026-08-20T15:01:00.000Z",
         failed_steps: [],
@@ -2660,7 +2660,7 @@ export const deliveryRunDetails: Record<number, CodeDeliveryRunDetail> = {
         name: "Storybook build",
         status: "completed",
         conclusion: "failure",
-        url: "https://github.com/brightwave-inc/tidebreak/actions/runs/4401/job/7102",
+        url: "https://github.com/octo-org/tidebreak/actions/runs/4401/job/7102",
         started_at: "2026-08-20T14:56:00.000Z",
         completed_at: "2026-08-20T15:10:00.000Z",
         failed_steps: ["Build static Storybook"],
@@ -2679,8 +2679,7 @@ export const deliveryRunDetails: Record<number, CodeDeliveryRunDetail> = {
         state: "success",
         description: "Production deployment completed.",
         environment_url: "https://tidebreak.example.com",
-        log_url:
-          "https://github.com/brightwave-inc/tidebreak/actions/runs/4388",
+        log_url: "https://github.com/octo-org/tidebreak/actions/runs/4388",
         created_at: "2026-08-20T13:29:00.000Z",
       },
     ],

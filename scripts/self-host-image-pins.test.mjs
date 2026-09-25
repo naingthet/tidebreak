@@ -162,7 +162,7 @@ test("every image the compose file runs is digest-pinned, except the release", (
   const images = [...compose.matchAll(/^\s+image: (.+)$/gm)].map((match) => match[1]);
   assert.ok(images.length >= 3, "postgres, server, and caddy");
   for (const image of images) {
-    if (image.startsWith("ghcr.io/brightwave-inc/tidebreak-server:")) {
+    if (image.startsWith("ghcr.io/naingthet/tidebreak-server:")) {
       assert.match(image, /:\$\{TIDEBREAK_VERSION:\?/);
       continue;
     }

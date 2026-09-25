@@ -140,7 +140,7 @@ describe("groupWorkspacesByRepo", () => {
   it("groups readable repository labels without adding repository settings", () => {
     const shared = {
       ...workspace("shared", "shared-repo"),
-      repo_display_name: "brightwave-inc/tidebreak",
+      repo_display_name: "octo-org/tidebreak",
     };
     const sameName = {
       ...workspace("other-shared", "other-repo"),
@@ -148,12 +148,12 @@ describe("groupWorkspacesByRepo", () => {
     };
     const groups = groupWorkspacesByRepo([], [shared, sameName]);
     expect(groups.map((group) => group.repo)).toEqual([
-      { id: "shared-repo", display_name: "brightwave-inc/tidebreak" },
-      { id: "other-repo", display_name: "brightwave-inc/tidebreak" },
+      { id: "shared-repo", display_name: "octo-org/tidebreak" },
+      { id: "other-repo", display_name: "octo-org/tidebreak" },
     ]);
     expect(
       arrangeWorkspaceSections("by-repo", [], [shared], {})[0]?.groups[0],
-    ).toMatchObject({ key: "shared-repo", label: "brightwave-inc/tidebreak" });
+    ).toMatchObject({ key: "shared-repo", label: "octo-org/tidebreak" });
     expect(
       groupWorkspacesByRepo([repo("shared-repo")], [shared])[0]?.repo
         ?.display_name,

@@ -20,7 +20,7 @@ under `workspaces/tidebreak/…`.
 The command already shipped in `#2762`. Identification lives in
 `isTidebreakProductRepo` / `tidebreakProductRepo`: a connected repo counts as
 the product checkout when its display name is `tidebreak` or
-`brightwave-inc/tidebreak`, or when the checkout folder basename is
+`naingthet/tidebreak`, or when the checkout folder basename is
 `tidebreak`. Worktree paths are not consulted as a match. When several
 connected repos match, display name `tidebreak` wins, then basename
 `tidebreak`, then the first remaining match. The command is hidden until that
@@ -56,7 +56,7 @@ shortcut for arbitrary repos.
 
 ### Match the git remote or GitHub repository id
 
-Resolving `brightwave-inc/tidebreak` from `origin` would survive a renamed
+Resolving `naingthet/tidebreak` from `origin` would survive a renamed
 folder. It was rejected because Code repo snapshots do not carry remotes
 today, it would add a git round-trip to every palette render, and a wrong
 remote on a coincidentally named folder is rarer than a false match on a
@@ -84,7 +84,7 @@ so that argument stops.
 ## Consequences
 
 A checkout whose folder is not `tidebreak` and whose display name is neither
-`tidebreak` nor `brightwave-inc/tidebreak` is invisible to Uneff me until the
+`tidebreak` nor `naingthet/tidebreak` is invisible to Uneff me until the
 user renames the Code repo or reclones. Contributors who keep the product
 under another directory name must set the display name.
 

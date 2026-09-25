@@ -36,7 +36,7 @@ To start a deployment, do the following on the machine:
 1. Get the deployment files:
 
    ```sh
-   git clone https://github.com/brightwave-inc/tidebreak.git
+   git clone https://github.com/naingthet/tidebreak.git
    cd tidebreak/deploy/self-host
    ```
 
@@ -378,7 +378,7 @@ Podman, run `podman unshare chown 10001 secret.key`. With rootless Docker, run
 
 ```sh
 docker run --rm --user 0 --entrypoint chown \
-  -v "$PWD/secret.key:/secret.key" ghcr.io/brightwave-inc/tidebreak-server:<version> 10001 /secret.key
+  -v "$PWD/secret.key:/secret.key" ghcr.io/naingthet/tidebreak-server:<version> 10001 /secret.key
 ```
 
 Do the same for `tokens`.
@@ -442,8 +442,7 @@ engines run as the server's uid and inherit its environment. `tokens` holds
 every user's token, the administrators' included, so reading it lets a member
 act as anyone. The Vault token file and provider environment variables are
 exposed the same way. Until members' code sessions are kept away from the
-deployment's secrets
-([#3590](https://github.com/brightwave-inc/tidebreak/issues/3590)), give
+deployment's secrets, give
 self-host accounts only to people you would trust with those secrets.
 
 Vault remains available. To use it instead, delete the
@@ -666,8 +665,7 @@ the server:
   adds the CLI, with `/var/run/docker.sock` mounted and the socket's group
   added to the server, completes a run. This stack does not set that up:
   mounting the Docker socket gives the server root on the host. Code mode
-  sessions run as the server's uid
-  ([#3590](https://github.com/brightwave-inc/tidebreak/issues/3590)), so every
+  sessions run as the server's uid, so every
   member who can use Code mode would have root on the host too.
 - `TIDEBREAK_CONTAINER_EXECUTION_ENABLED` routes background agent runs to
   sandbox containers. That backend publishes each sandbox's port on the host's
@@ -782,7 +780,7 @@ and the listen address itself; to change those, edit `docker-compose.yml`.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `TIDEBREAK_VERSION` | none; required | The release of `ghcr.io/brightwave-inc/tidebreak-server` that `up` pulls: 0.117.0 or later for the local-disk default. |
+| `TIDEBREAK_VERSION` | none; required | The release of `ghcr.io/naingthet/tidebreak-server` that `up` pulls: 0.117.0 or later for the local-disk default. |
 | `POSTGRES_PASSWORD` | none; required | The database password. Only PostgreSQL and the server use it. |
 | `TIDEBREAK_HOST_GID` | `10001` | The host group that owns `tokens` and `secret.key`. Compose adds it to the server so the server can read them. |
 | `TIDEBREAK_DOMAIN` | unset | The domain Caddy serves over HTTPS. |
@@ -844,7 +842,7 @@ An SSH clone URL fails.
 
 ### The end-to-end fixture image
 
-`ghcr.io/brightwave-inc/tidebreak-server-e2e:main` is the same Dockerfile
+`ghcr.io/naingthet/tidebreak-server-e2e:main` is the same Dockerfile
 built with `--build-arg CARGO_PROFILE=dev`. That build carries the scripted
 harness, an engine that plays a JSON script of events from
 `TIDEBREAK_SCRIPTED_HARNESS` instead of running a model, so an integration
@@ -1002,9 +1000,9 @@ To run the image without pages, unset `TIDEBREAK_UI_DIST`.
 
 The adapter is a shared, stateful service. It is not part of the server
 image. You run it next to a standalone machine when you want mentions and
-DMs in your own Slack app to drive sessions on that machine. The image is `ghcr.io/brightwave-inc/tidebreak-slack-adapter`
-(tags `v<version>`). An anonymous pull is refused; you need access to that
-package.
+DMs in your own Slack app to drive sessions on that machine. The adapter image
+ships with Model Gateway (tags `v<version>`), and pulling it needs access to
+that package.
 It listens on 8080. It needs its own PostgreSQL (`DATABASE_URL`), a
 token-sealing key, Slack credentials, and a machine directory. It does not
 need Model Gateway variables. One adapter instance uses one Slack workspace's

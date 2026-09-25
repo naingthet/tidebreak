@@ -42,7 +42,7 @@ Uneff me is offered on every workspace that has a session. It no longer
 depends on which repos are connected, and it never clones anything.
 
 When a connected repo is the Tidebreak product checkout by record 78's rule
-(display name `tidebreak` or `brightwave-inc/tidebreak`, or folder basename
+(display name `tidebreak` or `naingthet/tidebreak`, or folder basename
 `tidebreak`, never a worktree path), the fix workspace is created there.
 When none is, the session starts as a new agent in the workspace the reader
 is already in, shown as the selected agent once it exists. The prompt says

@@ -143,7 +143,7 @@ it("names each archive row's repository, never its raw id", () => {
       {
         ...codeRepositories[0]!,
         id: "mine",
-        display_name: "brightwave-inc/mine",
+        display_name: "octo-org/mine",
       },
     ],
     workspaces: [
@@ -159,7 +159,7 @@ it("names each archive row's repository, never its raw id", () => {
         id: "shared",
         title: "Shared archive",
         repo_id: repoId,
-        repo_display_name: "brightwave-inc/tidebreak",
+        repo_display_name: "octo-org/tidebreak",
         status: "archived",
         read_only: true,
       },
@@ -177,11 +177,11 @@ it("names each archive row's repository, never its raw id", () => {
   const row = (title: string) =>
     screen.getByText(title).closest('[role="listitem"]') as HTMLElement;
   // The column and the narrow-row line both carry the name.
+  expect(within(row("Own archive")).getAllByText("octo-org/mine")).toHaveLength(
+    2,
+  );
   expect(
-    within(row("Own archive")).getAllByText("brightwave-inc/mine"),
-  ).toHaveLength(2);
-  expect(
-    within(row("Shared archive")).getAllByText("brightwave-inc/tidebreak"),
+    within(row("Shared archive")).getAllByText("octo-org/tidebreak"),
   ).toHaveLength(2);
   expect(within(row("Shared archive")).queryByText(repoId)).toBeNull();
   for (const gone of within(row("Orphaned archive")).getAllByText(
@@ -202,7 +202,7 @@ it("finds a shared archive by its repository name", async () => {
         id: "shared",
         title: "Shared archive",
         repo_id: "0f4c2a9e-1b7d-4e55-9a3c-8d21f0c7b6aa",
-        repo_display_name: "brightwave-inc/tidebreak",
+        repo_display_name: "octo-org/tidebreak",
         status: "archived",
         read_only: true,
       },

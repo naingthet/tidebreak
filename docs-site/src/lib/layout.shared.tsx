@@ -1,11 +1,6 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 import { TidebreakLogo } from '@/components/logo';
-import {
-  DOWNLOAD_URL,
-  PRODUCT_URL,
-  REPO_URL,
-  ROADMAP_URL,
-} from '@/lib/site';
+import { DOWNLOAD_URL, REPO_URL } from '@/lib/site';
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -15,14 +10,8 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       {
-        text: 'Product',
-        url: PRODUCT_URL,
-        external: true,
-      },
-      {
         text: 'Roadmap',
-        url: ROADMAP_URL,
-        external: true,
+        url: '/roadmap',
       },
       {
         type: 'button',

@@ -3,8 +3,12 @@
 import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export const PRODUCTION_BASE_URL = "https://downloads.brightwave.io/tidebreak";
-export const STAGING_BASE_URL = `${PRODUCTION_BASE_URL}/staging`;
+// Tidebreak ships from GitHub Releases on its own repository. Each release's
+// files live under that tag's download path, and GitHub's `latest` redirect
+// serves the updater feed from the newest published release.
+export const RELEASE_REPOSITORY = "naingthet/tidebreak";
+export const PRODUCTION_BASE_URL = `https://github.com/${RELEASE_REPOSITORY}/releases/download`;
+export const PRODUCTION_UPDATER_ENDPOINT = `https://github.com/${RELEASE_REPOSITORY}/releases/latest/download/latest.json`;
 
 export const DESKTOP_CHANNELS = Object.freeze({
   production: Object.freeze({
@@ -14,18 +18,7 @@ export const DESKTOP_CHANNELS = Object.freeze({
     scheme: "tidebreak",
     environment: "desktop-production",
     baseUrl: PRODUCTION_BASE_URL,
-    s3Prefix: "tidebreak",
-    updaterEndpoint: `${PRODUCTION_BASE_URL}/latest.json`,
-  }),
-  staging: Object.freeze({
-    id: "staging",
-    identifier: "io.brightwave.tidebreak.staging",
-    productName: "Tidebreak [staging]",
-    scheme: "tidebreak-staging",
-    environment: "desktop-staging",
-    baseUrl: STAGING_BASE_URL,
-    s3Prefix: "tidebreak/staging",
-    updaterEndpoint: `${STAGING_BASE_URL}/latest.json`,
+    updaterEndpoint: PRODUCTION_UPDATER_ENDPOINT,
   }),
 });
 
@@ -37,35 +30,18 @@ export function desktopChannel(id) {
   return channel;
 }
 
-export function assertHostedUnderChannel(key, channelId) {
-  const channel = desktopChannel(channelId);
-  if (channelId === "staging" && key.startsWith("tidebreak/releases/")) {
-    throw new Error(`staging must not write production release objects: ${key}`);
+// The public URL of one file attached to the release tagged `tag`.
+export function releaseAssetUrl(baseUrl, tag, assetName) {
+  if (!assetName || assetName.includes("/")) {
+    throw new Error(`release asset names are flat file names: ${assetName}`);
   }
-  if (
-    channelId === "staging" &&
-    (key === "tidebreak/latest.json" || key === "tidebreak/manifest.json")
-  ) {
-    throw new Error(`staging must not write production feed objects: ${key}`);
-  }
-  const prefix = `${channel.s3Prefix}/`;
-  if (key !== channel.s3Prefix && !key.startsWith(prefix)) {
-    throw new Error(
-      `refusing to publish ${key} outside ${channel.s3Prefix}/ for ${channelId}`,
-    );
-  }
+  return `${baseUrl}/${encodeURIComponent(tag)}/${encodeURIComponent(assetName)}`;
 }
 
 function main() {
-  if (process.argv[2] === "--assert-key") {
-    assertHostedUnderChannel(process.argv[4], process.argv[3]);
-    return;
-  }
   const id = process.argv[2];
   if (!id) {
-    throw new Error(
-      "usage: desktop-channel.mjs <production|staging> | --assert-key <channel> <key>",
-    );
+    throw new Error("usage: desktop-channel.mjs <production>");
   }
   const channel = desktopChannel(id);
   if (process.env.GITHUB_OUTPUT) {

@@ -134,8 +134,8 @@ screen and Settings → Connections both offer that path.
   `openid profile offline_access`; `control_plane:read` and `runtime:execute`
   are requested only from a gateway advertising
   `surfaces.tidebreak_mobile_console`, and `control_plane:write` also needs
-  `surfaces.control_plane_write`. No gateway advertises the first flag yet
-  (brightwave-inc/model-gateway#2044), so today every pairing is machine-only.
+  `surfaces.control_plane_write`. No gateway advertises the first flag yet,
+  so today every pairing is machine-only.
   A gateway that refuses a console resource answers `invalid_resource`, which
   is a degraded surface rather than a sign-out.
 

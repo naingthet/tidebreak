@@ -66,7 +66,7 @@ fn exact_pull_request_targets_group_repositories_and_numbers() {
         (
             CodeGitHubRepositoryTarget {
                 host: "GitHub.COM".into(),
-                owner: "brightwave-inc".into(),
+                owner: "octo-org".into(),
                 name: "tidebreak.git".into(),
             },
             vec![41, 40, 41],
@@ -74,7 +74,7 @@ fn exact_pull_request_targets_group_repositories_and_numbers() {
         (
             CodeGitHubRepositoryTarget {
                 host: "github.com".into(),
-                owner: "brightwave-inc".into(),
+                owner: "octo-org".into(),
                 name: "tidebreak".into(),
             },
             vec![42, 0],
@@ -85,7 +85,7 @@ fn exact_pull_request_targets_group_repositories_and_numbers() {
     assert_eq!(grouped.len(), 1);
     assert_eq!(
         repository_key(&grouped[0].0),
-        "github.com/brightwave-inc/tidebreak"
+        "github.com/octo-org/tidebreak"
     );
     assert_eq!(grouped[0].1, vec![40, 41, 42]);
 }
@@ -204,7 +204,7 @@ fn workspace_index_marker(owner: &OwnerId, marker: &str) -> Vec<WorkspaceIndexEn
             bundle_bytes: None,
             setup_error: None,
         },
-        repository_key: format!("github.com/brightwave-inc/{marker}"),
+        repository_key: format!("github.com/octo-org/{marker}"),
         head_sha: Some(marker.into()),
     }]
 }
@@ -212,10 +212,10 @@ fn workspace_index_marker(owner: &OwnerId, marker: &str) -> Vec<WorkspaceIndexEn
 fn repository_ref() -> CodeGitHubRepositoryRef {
     CodeGitHubRepositoryRef {
         host: "github.com".into(),
-        owner: "brightwave-inc".into(),
+        owner: "octo-org".into(),
         name: "tidebreak".into(),
-        name_with_owner: "brightwave-inc/tidebreak".into(),
-        url: "https://github.com/brightwave-inc/tidebreak".into(),
+        name_with_owner: "octo-org/tidebreak".into(),
+        url: "https://github.com/octo-org/tidebreak".into(),
         default_branch: Some("main".into()),
         tidebreak_repo_id: None,
     }
@@ -224,7 +224,7 @@ fn repository_ref() -> CodeGitHubRepositoryRef {
 fn repository_target(name: &str) -> CodeGitHubRepositoryTarget {
     CodeGitHubRepositoryTarget {
         host: "github.com".into(),
-        owner: "brightwave-inc".into(),
+        owner: "octo-org".into(),
         name: name.into(),
     }
 }
@@ -349,7 +349,7 @@ fn a_stored_workflow_run_projects_the_same_summary_as_a_host_parse() {
         "conclusion": "failure",
         "name": "Desktop CI",
         "display_title": "fix the build",
-        "html_url": "https://github.com/brightwave-inc/tidebreak/actions/runs/41",
+        "html_url": "https://github.com/octo-org/tidebreak/actions/runs/41",
         "head_branch": "main",
         "head_sha": "abc123",
         "event": "push",
@@ -410,8 +410,8 @@ fn member_authorization_drops_removed_repositories_without_rescanning_git() {
     };
 
     let allowed = live_catalog_target_keys(&catalog, &HashSet::from([live_id]));
-    assert!(allowed.contains("github.com/brightwave-inc/live"));
-    assert!(!allowed.contains("github.com/brightwave-inc/removed"));
+    assert!(allowed.contains("github.com/octo-org/live"));
+    assert!(!allowed.contains("github.com/octo-org/removed"));
 }
 
 #[test]
@@ -462,7 +462,7 @@ fn a_merged_pull_request_carries_its_merge_time() {
             "number": 2240,
             "title": "Cache the workspace digest",
             "state": "MERGED",
-            "url": "https://github.com/brightwave-inc/tidebreak/pull/2240",
+            "url": "https://github.com/octo-org/tidebreak/pull/2240",
             "isDraft": false,
             "headRefName": "mara/cache",
             "baseRefName": "main",
@@ -491,7 +491,7 @@ fn a_merge_time_outranks_a_closed_state() {
             "number": 2233,
             "title": "Split the workspace route",
             "state": "CLOSED",
-            "url": "https://github.com/brightwave-inc/tidebreak/pull/2233",
+            "url": "https://github.com/octo-org/tidebreak/pull/2233",
             "headRefName": "ines/split",
             "baseRefName": "main",
             "mergedAt": "2026-08-15T16:02:00Z",
@@ -510,7 +510,7 @@ fn an_open_pull_request_has_no_settled_timestamps() {
             "number": 2251,
             "title": "Build the delivery center",
             "state": "OPEN",
-            "url": "https://github.com/brightwave-inc/tidebreak/pull/2251",
+            "url": "https://github.com/octo-org/tidebreak/pull/2251",
             "headRefName": "thet/delivery-center",
             "baseRefName": "main",
             "mergedAt": null,
@@ -531,7 +531,7 @@ fn merge_queue_membership_prefers_the_timeline_flag() {
         "number": 2740,
         "title": "Queued change",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2740",
+        "url": "https://github.com/octo-org/tidebreak/pull/2740",
         "headRefName": "thet/fix",
         "baseRefName": "main",
         "mergeStateStatus": "BLOCKED",
@@ -550,7 +550,7 @@ fn merge_queue_membership_prefers_the_timeline_flag() {
         "number": 2740,
         "title": "Open change",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2740",
+        "url": "https://github.com/octo-org/tidebreak/pull/2740",
         "headRefName": "thet/fix",
         "baseRefName": "main",
         "mergeStateStatus": "BLOCKED",
@@ -563,7 +563,7 @@ fn merge_queue_membership_prefers_the_timeline_flag() {
         "number": 2740,
         "title": "Host queued",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2740",
+        "url": "https://github.com/octo-org/tidebreak/pull/2740",
         "headRefName": "thet/fix",
         "baseRefName": "main",
         "mergeStateStatus": "queued"
@@ -672,7 +672,7 @@ fn pull_request_head_repository_requires_consistent_host_identity() {
         "number": 2252,
         "title": "Qualify stack identity",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2252",
+        "url": "https://github.com/octo-org/tidebreak/pull/2252",
         "headRepository": {
             "name": "tidebreak",
             "nameWithOwner": "Thet/Tidebreak"
@@ -691,7 +691,7 @@ fn pull_request_head_repository_requires_consistent_host_identity() {
         "number": 2253,
         "title": "Reject conflicting identity",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2253",
+        "url": "https://github.com/octo-org/tidebreak/pull/2253",
         "headRepository": {
             "name": "tidebreak",
             "nameWithOwner": "alice/tidebreak"
@@ -811,8 +811,8 @@ fn canned_repository_value() -> Value {
     serde_json::json!({
         "id": 1,
         "name": "tidebreak",
-        "owner": { "login": "brightwave-inc" },
-        "html_url": "https://github.com/brightwave-inc/tidebreak",
+        "owner": { "login": "octo-org" },
+        "html_url": "https://github.com/octo-org/tidebreak",
         "default_branch": "main"
     })
 }
@@ -1193,7 +1193,7 @@ fn deployment_status_stays_unknown_when_the_host_gate_is_closed() {
 fn detail_failures_name_the_missing_section() {
     let target = CodeGitHubRepositoryTarget {
         host: "github.com".into(),
-        owner: "brightwave-inc".into(),
+        owner: "octo-org".into(),
         name: "tidebreak".into(),
     };
     let error = detail_source_error(&target, "changed files", "gh api timed out".into());
@@ -1257,7 +1257,7 @@ fn host_stacks_parse_in_payload_order_with_open_parents_only() {
                 "id": 901,
                 "number": 7,
                 "node_id": "S_7",
-                "url": "https://github.com/brightwave-inc/tidebreak/stacks/7",
+                "url": "https://github.com/octo-org/tidebreak/stacks/7",
                 "base": {"ref": "main"},
                 "open": true,
                 "created_at": "2026-08-20T10:00:00Z",
@@ -1410,7 +1410,7 @@ fn a_numeric_offset_cursor_is_rejected() {
         CachedAggregate {
             fetched_at: Instant::now(),
             items: vec![run_list_row(
-                "github.com/brightwave-inc/tidebreak:workflow:1",
+                "github.com/octo-org/tidebreak:workflow:1",
                 CodeDeliveryRunKind::WorkflowRun,
                 Utc::now(),
             )],
@@ -1427,7 +1427,7 @@ fn pull_request_list_row(id: &str, updated_at: DateTime<Utc>) -> CodeDeliveryPul
         id: id.into(),
         repository: repository_ref(),
         number: 1,
-        url: format!("https://github.com/brightwave-inc/tidebreak/pull/{id}"),
+        url: format!("https://github.com/octo-org/tidebreak/pull/{id}"),
         title: id.into(),
         state: "open".into(),
         draft: false,
@@ -1520,7 +1520,7 @@ fn run_list_row(
         github_id: 1,
         run_attempt: None,
         name: id.into(),
-        url: format!("https://github.com/brightwave-inc/tidebreak/{id}"),
+        url: format!("https://github.com/octo-org/tidebreak/{id}"),
         status: "completed".into(),
         conclusion: Some("success".into()),
         workflow: None,
@@ -1803,7 +1803,7 @@ fn a_list_read_without_a_rollup_does_not_claim_to_know_the_checks() {
         "number": 2801,
         "title": "Sweep read",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2801",
+        "url": "https://github.com/octo-org/tidebreak/pull/2801",
         "headRefName": "thet/sweep",
         "baseRefName": "main"
     });
@@ -1815,7 +1815,7 @@ fn a_list_read_without_a_rollup_does_not_claim_to_know_the_checks() {
         "number": 2801,
         "title": "Sweep read",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2801",
+        "url": "https://github.com/octo-org/tidebreak/pull/2801",
         "headRefName": "thet/sweep",
         "baseRefName": "main",
         "statusCheckRollup": []
@@ -1848,7 +1848,7 @@ fn a_host_answer_only_reports_the_fields_it_carried() {
         "number": 2802,
         "title": "Hosted read",
         "state": "open",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2802",
+        "url": "https://github.com/octo-org/tidebreak/pull/2802",
         "headRefName": "thet/hosted",
         "headRefOid": "abc123",
         "baseRefName": "main",
@@ -1874,7 +1874,7 @@ fn a_host_answer_only_reports_the_fields_it_carried() {
         "number": 2802,
         "title": "Local read",
         "state": "OPEN",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/2802",
+        "url": "https://github.com/octo-org/tidebreak/pull/2802",
         "headRefName": "thet/hosted",
         "headRefOid": "abc123",
         "baseRefName": "main",

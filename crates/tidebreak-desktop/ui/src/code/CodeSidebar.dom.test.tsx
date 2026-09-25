@@ -182,7 +182,7 @@ describe("CodeSidebar", () => {
       {
         id: "shared-workspace",
         repo_id: "aa530dda-private-owner-repo",
-        repo_display_name: "brightwave-inc/tidebreak",
+        repo_display_name: "octo-org/tidebreak",
         title: "Document the child session tree",
         worktree_path: "remote://shared-workspace",
         branch_name: "docs/child-session-tree",
@@ -199,12 +199,12 @@ describe("CodeSidebar", () => {
     );
     expect(
       await screen.findByRole("button", {
-        name: "brightwave-inc/tidebreak, 1 workspace",
+        name: "octo-org/tidebreak, 1 workspace",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: /Document the child session tree.*brightwave-inc\/tidebreak/,
+        name: /Document the child session tree.*octo-org\/tidebreak/,
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Other repos")).not.toBeInTheDocument();

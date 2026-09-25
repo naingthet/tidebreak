@@ -13,8 +13,8 @@
  * Two details are load-bearing and easy to get wrong:
  *
  * **`client_id`.** The session is created before any phone has claimed it, so
- * it names no client; the claim and the poll each declare one
- * (brightwave-inc/model-gateway#2045). Omitting it means `tidewatch`, whose
+ * it names no client; the claim and the poll each declare one. Omitting it
+ * means `tidewatch`, whose
  * registered redirect schemes are not this app's — the claim would be accepted
  * and the redemption would then fail on the redirect match. Every request here
  * sends `tidebreak-mobile`.

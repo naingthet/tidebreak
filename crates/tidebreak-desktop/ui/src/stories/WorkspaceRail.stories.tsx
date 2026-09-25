@@ -141,7 +141,7 @@ export const SharedRepositoryLabels: Story = {
     const canvas = within(canvasElement);
     await expect(
       canvas.getByRole("button", {
-        name: "brightwave-inc/tidebreak, 3 workspaces",
+        name: "octo-org/tidebreak, 3 workspaces",
       }),
     ).toBeVisible();
     await expect(canvas.queryByText("Other repos")).not.toBeInTheDocument();

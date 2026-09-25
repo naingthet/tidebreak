@@ -14,7 +14,8 @@ new identity. There are no existing users or installations whose commands,
 configuration, application data, persisted state, or operating-system
 registration need compatibility handling.
 
-The GitHub repository remains `brightwave-inc/openwave` temporarily and will be
+The GitHub repository remains `openwave`, under its original organization,
+temporarily and will be
 renamed separately. Its current URL is an operational location, not a product
 identifier. New GitHub Container Registry packages use Tidebreak names now.
 
@@ -35,7 +36,7 @@ No OpenWave aliases, migrations, shims, or deprecation period will be added.
 An old product-owned name left after the rename is a defect.
 
 Until the repository is renamed, references that must resolve to the current
-GitHub repository retain `brightwave-inc/openwave`. Sandbox images publish to
+GitHub repository retain the `openwave` repository name. Sandbox images publish to
 new `tidebreak-sandbox-agent` GitHub Container Registry packages immediately.
 The later repository move must update the remaining repository coordinates and
 is deliberately outside this change.

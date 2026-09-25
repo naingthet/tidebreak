@@ -2370,10 +2370,10 @@ describe("code delivery API", () => {
   };
   const repository = {
     host: "github.com",
-    owner: "brightwave-inc",
+    owner: "octo-org",
     name: "tidebreak",
-    name_with_owner: "brightwave-inc/tidebreak",
-    url: "https://github.com/brightwave-inc/tidebreak",
+    name_with_owner: "octo-org/tidebreak",
+    url: "https://github.com/octo-org/tidebreak",
     default_branch: "main",
     tidebreak_repo_id: "repo-1",
   };
@@ -2383,10 +2383,10 @@ describe("code delivery API", () => {
     name: repository.name,
   };
   const pullRequest = {
-    id: "github.com/brightwave-inc/tidebreak#2248",
+    id: "github.com/octo-org/tidebreak#2248",
     repository,
     number: 2248,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/2248",
+    url: "https://github.com/octo-org/tidebreak/pull/2248",
     title: "Build the delivery center",
     state: "open",
     draft: false,
@@ -2403,12 +2403,12 @@ describe("code delivery API", () => {
     updated_at: "2026-08-20T12:00:00.000Z",
   };
   const run = {
-    id: "github.com/brightwave-inc/tidebreak:workflow_run:77",
+    id: "github.com/octo-org/tidebreak:workflow_run:77",
     repository,
     kind: "workflow_run",
     github_id: 77,
     name: "Desktop CI",
-    url: "https://github.com/brightwave-inc/tidebreak/actions/runs/77",
+    url: "https://github.com/octo-org/tidebreak/actions/runs/77",
     status: "completed",
     conclusion: "failure",
     attention_reasons: ["failure"],
@@ -2440,8 +2440,8 @@ describe("code delivery API", () => {
     );
     await expect(
       client.resolveCodeDeliveryRepositories([
-        "brightwave-inc/tidebreak",
-        "github.com/brightwave-inc/docs",
+        "octo-org/tidebreak",
+        "github.com/octo-org/docs",
       ]),
     ).resolves.toEqual(snapshot);
 
@@ -2461,10 +2461,7 @@ describe("code delivery API", () => {
     );
     expect(resolveInit.method).toBe("POST");
     expect(JSON.parse(String(resolveInit.body))).toEqual({
-      repositories: [
-        "brightwave-inc/tidebreak",
-        "github.com/brightwave-inc/docs",
-      ],
+      repositories: ["octo-org/tidebreak", "github.com/octo-org/docs"],
     });
   });
 

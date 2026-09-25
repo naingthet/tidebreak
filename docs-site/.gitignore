@@ -4,7 +4,6 @@
 # build output
 /.next/
 /out/
-/.vercel/
 *.tsbuildinfo
 
 # misc

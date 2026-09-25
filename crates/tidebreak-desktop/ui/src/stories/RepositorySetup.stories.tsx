@@ -74,7 +74,7 @@ function setupClient(scenario: SetupScenario): ApiClient {
         ? {
             repositories: [
               {
-                full_name: "brightwave-inc/tidebreak",
+                full_name: "octo-org/tidebreak",
                 private: true,
                 description:
                   "Open-source, local-first desktop for AI coding agents and documents",
@@ -85,7 +85,7 @@ function setupClient(scenario: SetupScenario): ApiClient {
                 description: "scratch",
               },
               {
-                full_name: "brightwave-inc/shipright",
+                full_name: "octo-org/shipright",
                 private: true,
                 description: "Review bots for pull requests",
               },
@@ -95,27 +95,27 @@ function setupClient(scenario: SetupScenario): ApiClient {
                 description: "machine setup",
               },
               {
-                full_name: "brightwave-inc/model-gateway",
+                full_name: "octo-org/model-gateway",
                 private: true,
                 description: "Self-hosted LLM and MCP aggregation gateway",
               },
               {
-                full_name: "brightwave-inc/clawdbot",
+                full_name: "octo-org/clawdbot",
                 private: true,
                 description: "",
               },
               {
-                full_name: "brightwave-inc/terraform-main",
+                full_name: "octo-org/terraform-main",
                 private: true,
                 description: "All things terraform related",
               },
               {
-                full_name: "brightwave-inc/tidebreak-site",
+                full_name: "octo-org/tidebreak-site",
                 private: true,
                 description: "Marketing site",
               },
               {
-                full_name: "brightwave-inc/orca",
+                full_name: "octo-org/orca",
                 private: true,
                 description: "Internal agent workspace tooling",
               },
@@ -298,7 +298,7 @@ function setupRouter() {
 }
 
 const CLONE_REQUEST = {
-  url: "https://github.com/brightwave-inc/tidebreak.git",
+  url: "https://github.com/octo-org/tidebreak.git",
   parent_dir: "/Users/sam/src",
 };
 

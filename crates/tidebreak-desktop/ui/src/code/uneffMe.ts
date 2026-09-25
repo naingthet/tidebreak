@@ -25,13 +25,7 @@ export const TIDEBREAK_GITHUB_REPO = "naingthet/tidebreak";
 /** The heading the startup handoff shows while Uneff me gets going. */
 export const UNEFF_STARTUP_HEADING = "Getting Tidebreak ready to help";
 
-// Clones made before Tidebreak moved to its new home still name the old
-// repository, and they are the same product checkout.
-const PRODUCT_REPO_NAMES = new Set([
-  "tidebreak",
-  TIDEBREAK_GITHUB_REPO,
-  "brightwave-inc/tidebreak",
-]);
+const PRODUCT_REPO_NAMES = new Set(["tidebreak", TIDEBREAK_GITHUB_REPO]);
 
 export function repoPathBasename(path: string): string {
   const trimmed = path.replace(/[\\/]+$/, "");

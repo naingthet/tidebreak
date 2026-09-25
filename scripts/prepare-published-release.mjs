@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -9,6 +8,7 @@ import {
   RELEASE_PLATFORMS,
   releasePlatforms,
 } from "./create-release-manifests.mjs";
+import { releaseAssetUrl } from "./desktop-channel.mjs";
 
 function requiredOption(options, name) {
   const value = options.get(name);
@@ -29,11 +29,6 @@ function parseOptions(args) {
     options.set(flag.slice(2), value);
   }
   return options;
-}
-
-function publicUrl(baseUrl, version, filename) {
-  const encodedPath = filename.split("/").map(encodeURIComponent).join("/");
-  return `${baseUrl}/releases/v${version}/${encodedPath}`;
 }
 
 function requireExact(value, expected, description) {
@@ -62,11 +57,7 @@ export function validatePublishedReleaseManifest({
   for (const platformDescriptor of platforms) {
     for (const arch of platformDescriptor.architectures) {
       for (const descriptor of platformDescriptor.formats) {
-        const filename = path.posix.join(
-          platformDescriptor.platform,
-          arch,
-          `Tidebreak_${version}_${arch}${descriptor.extension}`,
-        );
+        const filename = `Tidebreak_${version}_${arch}${descriptor.extension}`;
         expected.set(filename, {
           platform: platformDescriptor.platform,
           arch,
@@ -101,9 +92,9 @@ export function validatePublishedReleaseManifest({
       throw new Error("published release has an invalid artifact digest");
     }
 
-    const artifactUrl = publicUrl(
+    const artifactUrl = releaseAssetUrl(
       normalizedBaseUrl,
-      version,
+      tag,
       artifact.filename,
     );
     requireExact(artifact.url, artifactUrl, "artifact URL");
@@ -156,7 +147,7 @@ export function preparePublishedRelease({
   baseUrl,
   platformSelection = "all",
 }) {
-  const platforms = releasePlatforms("production", platformSelection);
+  const platforms = releasePlatforms(platformSelection);
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   validatePublishedReleaseManifest({
     manifest,

@@ -368,7 +368,7 @@ test("docker-compose.yml reads what setup writes", () => {
   // `up` pulls the release; building is the separate override file's job.
   assert.match(
     compose,
-    /image: ghcr\.io\/brightwave-inc\/tidebreak-server:\$\{TIDEBREAK_VERSION:\?/,
+    /image: ghcr\.io\/naingthet\/tidebreak-server:\$\{TIDEBREAK_VERSION:\?/,
   );
   assert.doesNotMatch(compose, /^\s+build:/m);
   // The release setup.sh refuses to go below is the one the compose file's

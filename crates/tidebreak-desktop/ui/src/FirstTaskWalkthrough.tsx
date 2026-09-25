@@ -327,7 +327,7 @@ export function FirstTaskWalkthrough({
             />
             <div
               data-first-task-ring
-              className="absolute rounded-[10px] ring-2 ring-[var(--brightwave)] ring-offset-2 ring-offset-transparent"
+              className="absolute rounded-[10px] ring-2 ring-current ring-offset-2 ring-offset-transparent"
               style={{
                 top: rect.top - inset,
                 left: rect.left - inset,

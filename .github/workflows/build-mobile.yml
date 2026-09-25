@@ -1,27 +1,16 @@
 name: Build and Submit Mobile
 
+# EAS builds and store submissions need an Expo account, so this workflow runs
+# only when someone dispatches it, and it skips cleanly when the repository has
+# no EXPO_TOKEN secret. Pull requests check the mobile app in mobile-checks.yml.
+
 concurrency:
   group: mobile-build-${{ github.ref }}
-  # Cancel stale PR dry-runs when a new commit is pushed; never cancel real
-  # deploys (push to main / workflow_dispatch), since GH-side cancel doesn't
-  # propagate to EAS — serial FIFO is correct there.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Never cancel a real deploy: a cancel on GitHub's side does not propagate
+  # to EAS, so runs queue in order instead.
+  cancel-in-progress: false
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "mobile/**"
-      - ".github/workflows/build-mobile.yml"
-  # PRs always trigger the workflow so the `deploy` job can serve as a
-  # stable required status check on `main`. The path-aware short-circuit
-  # lives inside the workflow (`check-mobile-changes` → `deploy.if`):
-  # non-mobile PRs see `deploy` skipped, which GitHub treats as
-  # satisfying a required status check. Mobile PRs run the full routing
-  # + dry-run path (no real OTA, no real build, no submission — see the
-  # `if` guards on the deploy steps).
-  pull_request:
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       platform:
@@ -41,48 +30,32 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  check-mobile-changes:
-    name: Check for mobile changes
+  expo:
+    name: Check for an Expo token
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 5
     outputs:
-      mobile: ${{ steps.filter.outputs.mobile }}
+      available: ${{ steps.token.outputs.available }}
     steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        id: filter
-        with:
-          base: ${{ github.ref }}
-          filters: |
-            mobile:
-              - added|deleted|modified: 'mobile/**'
-              - added|deleted|modified: '.github/workflows/build-mobile.yml'
+      - name: Check for EXPO_TOKEN
+        id: token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [[ -n "$EXPO_TOKEN" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::The repository has no EXPO_TOKEN secret, so there is nothing to build. Add one to build and submit the mobile app."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
 
   deploy:
-    needs: check-mobile-changes
+    needs: expo
     name: Deploy (production / ${{ inputs.platform || 'ios' }})
-    # Skip on non-mobile PRs so `deploy` becomes a stable required status
-    # check that auto-passes on PRs unrelated to mobile (skipped jobs
-    # satisfy required status checks on `main`). `always()` is needed
-    # because `check-mobile-changes` is itself skipped on non-PR events,
-    # which would otherwise cascade-skip this job.
-    #
-    # Also skip for Dependabot PRs: Dependabot-triggered runs use the
-    # Dependabot secrets store and never see regular Actions secrets, so
-    # `secrets.EXPO_TOKEN` is empty and the first EAS step (`eas env:exec`
-    # in the routing dry-run) fails auth. Skipping satisfies the required
-    # check the same way non-mobile PRs do, instead of failing on a token
-    # Dependabot can't be granted.
-    if: |
-      always() &&
-      github.actor != 'dependabot[bot]' &&
-      (github.event_name != 'pull_request' || needs.check-mobile-changes.outputs.mobile == 'true')
+    # Without an Expo token the job is skipped, which reports success.
+    if: ${{ needs.expo.outputs.available == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -162,16 +135,12 @@ jobs:
           esac
 
           mode=ota
-          # Tee the routing table to both the step summary and a markdown file
-          # we can attach to a PR comment in a later step (PR dry-run only).
-          comment_file="$RUNNER_TEMP/routing-comment.md"
-          : > "$comment_file"
           {
             echo "### Fingerprint routing"
             echo ""
             echo "| Platform | Local hash | Last EAS build | Match |"
             echo "|---|---|---|---|"
-          } | tee -a "$comment_file" >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           for p in "${platforms[@]}"; do
             # Write fingerprint JSON to a file inside the wrapped command so any
@@ -200,7 +169,7 @@ jobs:
               mode=build
             fi
             echo "[$p] local=$local_hash  last_eas=${last_rv:-<none>}  match=$match"
-            echo "| $p | \`$local_hash\` | \`${last_rv:-<none>}\` | $match |" | tee -a "$comment_file" >> "$GITHUB_STEP_SUMMARY"
+            echo "| $p | \`$local_hash\` | \`${last_rv:-<none>}\` | $match |" >> "$GITHUB_STEP_SUMMARY"
           done
 
           echo ""
@@ -208,65 +177,19 @@ jobs:
           {
             echo ""
             echo "**Mode:** \`$mode\`"
-          } | tee -a "$comment_file" >> "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
       - name: Dry-run notice
-        if: github.event_name == 'pull_request' || inputs.dry_run
+        if: inputs.dry_run
         run: |
           {
             echo ""
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "**Dry run** — \`pull_request\` event. Skipping deploy steps. The routing decision above is what *would* run on push to \`main\` or \`workflow_dispatch\`."
-            else
-              echo "**Dry run** — \`workflow_dispatch\` with \`dry_run=true\`. Skipping deploy steps. The routing decision above is what *would* run with \`dry_run=false\`."
-            fi
+            echo "**Dry run** — \`dry_run=true\`. Skipping deploy steps. The routing decision above is what *would* run with \`dry_run=false\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Post routing decision to PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          MODE: ${{ steps.route.outputs.mode }}
-        with:
-          script: |
-            const fs = require('fs');
-            const path = `${process.env.RUNNER_TEMP}/routing-comment.md`;
-            const routing = fs.readFileSync(path, 'utf8').trim();
-            const tag = '<!-- comment-tag: mobile_ci_routing -->';
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const headline = process.env.MODE === 'build'
-              ? 'Merging will trigger an **EAS binary build + store submission** (TestFlight internal).'
-              : 'Merging will trigger an **OTA update** on the `production` channel.';
-            const body = [
-              tag,
-              '## Mobile CI: routing preview',
-              '',
-              headline,
-              '',
-              routing,
-              '',
-              `_Dry run from [workflow run](${runUrl}). Re-runs on each push to this PR._`,
-            ].join('\n');
-
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner, repo, issue_number, per_page: 100,
-            });
-            const existing = comments.find(c => c.body?.includes(tag));
-            if (existing) {
-              try {
-                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
-                return;
-              } catch (e) {
-                if (e.status !== 404) throw e;
-              }
-            }
-            await github.rest.issues.createComment({ owner, repo, issue_number, body });
-
       - name: Publish OTA
-        if: steps.route.outputs.mode == 'ota' && github.event_name != 'pull_request' && !inputs.dry_run
+        if: steps.route.outputs.mode == 'ota' && !inputs.dry_run
         working-directory: mobile
         # Wrap in `eas env:exec` so the local fingerprint compute that sets
         # the OTA's runtimeVersion sees the same EAS-stored env vars `eas
@@ -280,10 +203,7 @@ jobs:
         run: eas env:exec "$EAS_ENV" "eas update --branch $PROFILE --auto --non-interactive" --non-interactive
 
       - name: Build binary and auto-submit
-        if: |
-          steps.route.outputs.mode == 'build' &&
-          github.event_name != 'pull_request' &&
-          !inputs.dry_run
+        if: steps.route.outputs.mode == 'build' && !inputs.dry_run
         working-directory: mobile
         # $PLATFORM is `ios` until Play Console setup lands — see the
         # TODO(android) on the job `env` block above.

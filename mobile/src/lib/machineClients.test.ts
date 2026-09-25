@@ -45,7 +45,7 @@ function heldTransport() {
 
 describe("a machine client is bound to the connection that built it", () => {
   it("signs out only the machine whose own request was refused", async () => {
-    // The race Shipright found: machine A's poll is in flight, the user
+    // The race a code review found: machine A's poll is in flight, the user
     // switches to machine B, and A's 401 lands afterwards. Resolving the
     // consequence against whoever is active at *response* time wipes B — a
     // working roster token that was never on that wire.

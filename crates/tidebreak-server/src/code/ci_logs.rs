@@ -382,16 +382,16 @@ mod tests {
     #[test]
     fn an_actions_check_url_carries_its_job() {
         let job = job_ref_from_check_url(
-            "https://github.com/brightwave-inc/tidebreak/actions/runs/32664268801/job/97255126659",
+            "https://github.com/octo-org/tidebreak/actions/runs/32664268801/job/97255126659",
         )
         .expect("actions job url");
         assert_eq!(job.host, "github.com");
-        assert_eq!(job.owner, "brightwave-inc");
+        assert_eq!(job.owner, "octo-org");
         assert_eq!(job.repo, "tidebreak");
         assert_eq!(job.job_id, 97_255_126_659);
         assert_eq!(
             job.endpoint(),
-            "repos/brightwave-inc/tidebreak/actions/jobs/97255126659/logs"
+            "repos/octo-org/tidebreak/actions/jobs/97255126659/logs"
         );
     }
 
@@ -408,10 +408,10 @@ mod tests {
     /// A check-run URL and an external provider have no job log to fetch.
     #[test]
     fn a_url_without_a_job_segment_is_skipped() {
-        assert!(job_ref_from_check_url(
-            "https://github.com/brightwave-inc/tidebreak/runs/97078624591"
-        )
-        .is_none());
+        assert!(
+            job_ref_from_check_url("https://github.com/octo-org/tidebreak/runs/97078624591")
+                .is_none()
+        );
         assert!(job_ref_from_check_url(
             "https://github.com/acme/widgets/actions/runs/12/job/not-a-number"
         )

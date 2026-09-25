@@ -8,9 +8,8 @@ import {
   createReleaseManifests,
   RELEASE_PLATFORM_SELECTIONS,
   RELEASE_PLATFORMS,
-  STAGING_RELEASE_PLATFORMS,
 } from "./create-release-manifests.mjs";
-import { STAGING_BASE_URL } from "./desktop-channel.mjs";
+import { PRODUCTION_BASE_URL } from "./desktop-channel.mjs";
 import { preparePublishedRelease } from "./prepare-published-release.mjs";
 
 const EXPECTED_ARTIFACT_COUNT = RELEASE_PLATFORMS.reduce(
@@ -46,8 +45,10 @@ const RELEASE = {
   tag: "v0.4.2",
   sha: "0123456789abcdef0123456789abcdef01234567",
   publishedAt: "2026-07-22T16:00:00Z",
-  baseUrl: "https://downloads.brightwave.io/tidebreak",
+  baseUrl: "https://github.com/naingthet/tidebreak/releases/download",
 };
+
+const DOWNLOAD = "https://github.com/naingthet/tidebreak/releases/download/v0.4.2/";
 
 test("creates a complete manifest and Tauri updater document", () => {
   const dist = releaseFixture();
@@ -64,9 +65,9 @@ test("creates a complete manifest and Tauri updater document", () => {
     "linux-x86_64-deb",
     "linux-aarch64-deb",
   ]);
-  assert.match(
+  assert.equal(
     latest.platforms["darwin-aarch64"].url,
-    /releases\/v0\.4\.2\/macos\/universal\/Tidebreak_0\.4\.2_universal\.app\.tar\.gz$/,
+    `${DOWNLOAD}Tidebreak_0.4.2_universal.app.tar.gz`,
   );
   assert.equal(
     latest.platforms["darwin-aarch64"].signature,
@@ -76,49 +77,49 @@ test("creates a complete manifest and Tauri updater document", () => {
     latest.platforms["darwin-x86_64"],
     latest.platforms["darwin-aarch64"],
   );
-  assert.match(
+  assert.equal(
     latest.platforms["windows-x86_64"].url,
-    /releases\/v0\.4\.2\/windows\/x86_64\/Tidebreak_0\.4\.2_x86_64-setup\.exe$/,
+    `${DOWNLOAD}Tidebreak_0.4.2_x86_64-setup.exe`,
   );
   assert.equal(
     latest.platforms["windows-x86_64"].signature,
     "signature-windows-x86_64-nsis",
   );
-  assert.match(
+  assert.equal(
     latest.platforms["windows-aarch64"].url,
-    /releases\/v0\.4\.2\/windows\/aarch64\/Tidebreak_0\.4\.2_aarch64-setup\.exe$/,
+    `${DOWNLOAD}Tidebreak_0.4.2_aarch64-setup.exe`,
   );
   assert.equal(
     latest.platforms["windows-aarch64"].signature,
     "signature-windows-aarch64-nsis",
   );
-  assert.match(
+  assert.equal(
     latest.platforms["linux-x86_64-appimage"].url,
-    /releases\/v0\.4\.2\/linux\/x86_64\/Tidebreak_0\.4\.2_x86_64\.AppImage$/,
+    `${DOWNLOAD}Tidebreak_0.4.2_x86_64.AppImage`,
   );
   assert.equal(
     latest.platforms["linux-x86_64-appimage"].signature,
     "signature-linux-x86_64-appimage",
   );
-  assert.match(
+  assert.equal(
     latest.platforms["linux-x86_64-deb"].url,
-    /releases\/v0\.4\.2\/linux\/x86_64\/Tidebreak_0\.4\.2_x86_64\.deb$/,
+    `${DOWNLOAD}Tidebreak_0.4.2_x86_64.deb`,
   );
   assert.equal(
     latest.platforms["linux-x86_64-deb"].signature,
     "signature-linux-x86_64-deb",
   );
-  assert.match(
+  assert.equal(
     latest.platforms["linux-aarch64-appimage"].url,
-    /releases\/v0\.4\.2\/linux\/aarch64\/Tidebreak_0\.4\.2_aarch64\.AppImage$/,
+    `${DOWNLOAD}Tidebreak_0.4.2_aarch64.AppImage`,
   );
   assert.equal(
     latest.platforms["linux-aarch64-appimage"].signature,
     "signature-linux-aarch64-appimage",
   );
-  assert.match(
+  assert.equal(
     latest.platforms["linux-aarch64-deb"].url,
-    /releases\/v0\.4\.2\/linux\/aarch64\/Tidebreak_0\.4\.2_aarch64\.deb$/,
+    `${DOWNLOAD}Tidebreak_0.4.2_aarch64.deb`,
   );
   assert.equal(
     latest.platforms["linux-aarch64-deb"].signature,
@@ -131,10 +132,16 @@ test("creates a complete manifest and Tauri updater document", () => {
   assert.deepEqual(diskManifest, manifest);
   for (const artifact of manifest.artifacts) {
     assert.equal(artifact.sha256.length, 64);
-    assert.match(artifact.url, /^https:\/\/downloads\.brightwave\.io\/tidebreak\//);
-    assert.match(
-      readFileSync(path.join(dist, artifact.filename) + ".sha256", "utf8"),
-      new RegExp(`^${artifact.sha256}  `),
+    assert.equal(artifact.url, `${DOWNLOAD}${artifact.filename}`);
+    assert.doesNotMatch(artifact.filename, /\//);
+    assert.equal(artifact.checksum_url, `${DOWNLOAD}${artifact.filename}.sha256`);
+    assert.equal(
+      readFileSync(
+        path.join(dist, artifact.platform, artifact.arch, artifact.filename) +
+          ".sha256",
+        "utf8",
+      ),
+      `${artifact.sha256}  ${artifact.filename}\n`,
     );
   }
 });
@@ -155,7 +162,7 @@ test("fails closed when an architecture is incomplete", () => {
   );
 });
 
-test("rejects mismatched tags and non-production hosts", () => {
+test("rejects mismatched tags and any feed outside this repository's releases", () => {
   const dist = releaseFixture();
   assert.throws(
     () => createReleaseManifests({ dist, ...RELEASE, tag: "v0.4.3" }),
@@ -168,62 +175,27 @@ test("rejects mismatched tags and non-production hosts", () => {
         ...RELEASE,
         baseUrl: "https://example.com/tidebreak",
       }),
-    /downloads\.brightwave\.io/,
+    /https:\/\/github\.com release download URL/,
   );
   assert.throws(
     () =>
       createReleaseManifests({
         dist,
         ...RELEASE,
-        baseUrl: STAGING_BASE_URL,
+        baseUrl: "https://downloads.example.io/tidebreak",
       }),
-    /production base URL/,
-  );
-});
-
-test("staging manifests stay under the staging prefix", () => {
-  const version = "0.0.0-staging.12";
-  const dist = releaseFixture(version, STAGING_RELEASE_PLATFORMS);
-  const staging = {
-    version,
-    tag: "staging-12",
-    sha: RELEASE.sha,
-    publishedAt: RELEASE.publishedAt,
-    baseUrl: STAGING_BASE_URL,
-    channel: "staging",
-  };
-  const { latest, manifest } = createReleaseManifests({ dist, ...staging });
-
-  assert.equal(manifest.version, version);
-  assert.equal(manifest.tag, "staging-12");
-  assert.match(
-    latest.platforms["darwin-aarch64"].url,
-    /\/tidebreak\/staging\/releases\/v0\.0\.0-staging\.12\//,
-  );
-  assert.deepEqual(Object.keys(latest.platforms), [
-    "darwin-aarch64",
-    "darwin-x86_64",
-  ]);
-  assert.throws(
-    () =>
-      createReleaseManifests({
-        dist,
-        ...staging,
-        channel: "staging",
-        baseUrl: RELEASE.baseUrl,
-      }),
-    /staging base URL/,
+    /https:\/\/github\.com release download URL/,
   );
   assert.throws(
     () =>
       createReleaseManifests({
         dist,
         ...RELEASE,
-        channel: "staging",
-        baseUrl: STAGING_BASE_URL,
+        baseUrl: "https://github.com/someone-else/tidebreak/releases/download",
       }),
-    /invalid staging version/,
+    /production base URL must be https:\/\/github\.com\/naingthet\/tidebreak\/releases\/download/,
   );
+  assert.equal(RELEASE.baseUrl, PRODUCTION_BASE_URL);
 });
 
 test("recreates latest metadata from an authoritative published manifest", () => {
@@ -243,7 +215,7 @@ test("recreates latest metadata from an authoritative published manifest", () =>
   );
 });
 
-test("rejects a published manifest that points outside its immutable prefix", () => {
+test("rejects a published manifest that points outside its release's downloads", () => {
   const dist = releaseFixture();
   createReleaseManifests({ dist, ...RELEASE });
   const manifestPath = path.join(dist, "manifest.json");

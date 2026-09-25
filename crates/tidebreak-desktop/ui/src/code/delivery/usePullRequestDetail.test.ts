@@ -18,7 +18,7 @@ const target = {
   repository: codeDeliveryRepositoryTarget(first.repository),
   number: first.number,
 };
-const targetKey = "github.com/brightwave-inc/tidebreak:pull-request:2251";
+const targetKey = "github.com/octo-org/tidebreak:pull-request:2251";
 
 function detailOf(
   summary: CodeDeliveryPullRequestSummary,

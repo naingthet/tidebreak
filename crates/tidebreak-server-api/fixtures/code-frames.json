@@ -82,10 +82,10 @@
         "review_decision": "APPROVED",
         "state": "open",
         "title": "refactor(cli): decode the chat event socket",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/3006"
+        "url": "https://github.com/octo-org/tidebreak/pull/3006"
       },
       "read_only": true,
-      "repo_display_name": "brightwave-inc/tidebreak",
+      "repo_display_name": "octo-org/tidebreak",
       "repo_id": "00000000-0000-0000-0000-000000000001",
       "status": "active",
       "title": "Bound the code parser",
@@ -735,7 +735,7 @@
         "review_decision": "APPROVED",
         "state": "open",
         "title": "refactor(cli): decode the chat event socket",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/3006"
+        "url": "https://github.com/octo-org/tidebreak/pull/3006"
       },
       "pushes_as": "mara",
       "pushes_as_self": true,
@@ -804,7 +804,7 @@
         "review_decision": "APPROVED",
         "state": "open",
         "title": "refactor(cli): decode the chat event socket",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/3006"
+        "url": "https://github.com/octo-org/tidebreak/pull/3006"
       },
       "recap": "The parser bounds every field; the tests are next.",
       "session": "00000000-0000-0000-0000-000000000003",
@@ -861,7 +861,7 @@
         "review_decision": "APPROVED",
         "state": "open",
         "title": "refactor(cli): decode the chat event socket",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/3006"
+        "url": "https://github.com/octo-org/tidebreak/pull/3006"
       },
       "recap": "The parser bounds every field; the tests are next.",
       "session": "00000000-0000-0000-0000-000000000003",
@@ -912,7 +912,7 @@
         "review_decision": "APPROVED",
         "state": "open",
         "title": "refactor(cli): decode the chat event socket",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/3006"
+        "url": "https://github.com/octo-org/tidebreak/pull/3006"
       },
       "session": "00000000-0000-0000-0000-000000000021",
       "title": "Watch #3006",
@@ -984,7 +984,7 @@
             "review_decision": "APPROVED",
             "state": "open",
             "title": "refactor(cli): decode the chat event socket",
-            "url": "https://github.com/brightwave-inc/tidebreak/pull/3006"
+            "url": "https://github.com/octo-org/tidebreak/pull/3006"
           },
           "recap": "The parser bounds every field; the tests are next.",
           "session": "00000000-0000-0000-0000-000000000003",
@@ -1058,7 +1058,7 @@
         "review_decision": "APPROVED",
         "state": "open",
         "title": "refactor(cli): decode the chat event socket",
-        "url": "https://github.com/brightwave-inc/tidebreak/pull/3006"
+        "url": "https://github.com/octo-org/tidebreak/pull/3006"
       },
       "recap": "The parser bounds every field; the tests are next.",
       "session": "00000000-0000-0000-0000-000000000003",

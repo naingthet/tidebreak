@@ -274,9 +274,8 @@ purpose:
   What no repo can do is name its own location; toolchains that misbehave
   outside the repo's ancestry are the known cost, and the override waits for
   real instances of that pain.
-- **A local relay for the mobile client.** The hosted mobile path shipped in
-  epic [#2644](https://github.com/brightwave-inc/tidebreak/issues/2644), and
-  the phone can now also attach straight to a standalone machine — a direct
+- **A local relay for the mobile client.** The hosted mobile path has shipped,
+  and the phone can now also attach straight to a standalone machine — a direct
   URL and a token from its roster, no gateway in the path
   ([record 98](decisions/0098-standalone-machine-attach-on-mobile.md), #3404).
   That covers a machine the phone can reach over trusted TLS. What remains

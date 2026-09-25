@@ -17,20 +17,17 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const policyTest = join(repositoryRoot, "scripts", "workflow-security.test.mjs");
 const fixturePaths = [
-  ".github/actions/setup-sccache-s3/action.yml",
+  ".github/actions/setup-sccache/action.yml",
   ".github/workflows",
   ".github/CODEOWNERS",
   ".github/release-drafter.yml",
-  ".github/e2b-cli/package.json",
   ".github/tauri-cli/package.json",
   ".github/tauri-cli/pnpm-lock.yaml",
-  ".github/vercel-cli/package.json",
-  ".github/vercel-cli/pnpm-lock.yaml",
   "docs-site/package.json",
+  "docs-site/next.config.mjs",
   "crates/tidebreak-cli/build.rs",
   "crates/tidebreak-core/build.rs",
   "crates/tidebreak-desktop/tauri.conf.json",
-  "crates/tidebreak-desktop/tauri.staging.conf.json",
   "crates/tidebreak-desktop/Cargo.toml",
   "crates/tidebreak-desktop/src/lib.rs",
   "crates/tidebreak-desktop/src/updater.rs",
@@ -147,7 +144,7 @@ const mutations = [
   {
     name: "compiler cache pull-request write access",
     file: ".github/workflows/ci.yml",
-    expected: "compiler caches use OIDC-scoped S3 access",
+    expected: "compiler caches use the GitHub Actions cache",
     mutate: (source) =>
       source.replace(
         "access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}",
@@ -155,29 +152,32 @@ const mutations = [
       ),
   },
   {
-    name: "compiler cache role escalation",
-    file: ".github/actions/setup-sccache-s3/action.yml",
-    expected: "compiler caches use OIDC-scoped S3 access",
-    mutate: (source) => source.replace("inputs.access == 'write'", "true"),
+    name: "compiler cache read-only mode escalation",
+    file: ".github/actions/setup-sccache/action.yml",
+    expected: "compiler caches use the GitHub Actions cache",
+    mutate: (source) =>
+      source.replace("read) cache_mode=READ_ONLY", "read) cache_mode=READ_WRITE"),
   },
   {
-    name: "compiler cache fork OIDC access",
+    name: "compiler cache OIDC permission",
     file: ".github/workflows/ci.yml",
-    expected: "compiler caches use OIDC-scoped S3 access",
+    expected: "compiler caches use the GitHub Actions cache",
     mutate: (source) =>
-      source.replace(
-        "          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}\n",
-        "",
+      editWorkflowJob(source, "lint", (job) =>
+        job.replace(
+          "    permissions:\n      contents: read\n",
+          "    permissions:\n      contents: read\n      id-token: write\n",
+        ),
       ),
   },
   {
-    name: "compiler cache feature-branch dispatch OIDC access",
-    file: ".github/actions/setup-sccache-s3/action.yml",
-    expected: "manual feature-branch validation keeps compiler cache local",
+    name: "compiler cache S3 backend",
+    file: ".github/actions/setup-sccache/action.yml",
+    expected: "compiler caches use the GitHub Actions cache",
     mutate: (source) =>
-      source.replaceAll(
-        " && (github.event_name != 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch))",
-        "",
+      source.replace(
+        '          echo "SCCACHE_GHA_ENABLED=true"\n',
+        '          echo "SCCACHE_BUCKET=example"\n',
       ),
   },
   {
@@ -212,95 +212,6 @@ const mutations = [
         /on:\n  release:\n    types: \[published\]\n  push:\n    branches: \[main\]/,
         'on:\n  push:\n    tags: ["v*"]\n    branches: [main]',
       ),
-  },
-  {
-    name: "default-branch dispatch guard",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "production secrets remain isolated",
-    mutate: (source) =>
-      source.replace(
-        /(workflow_dispatch\)\n)\s+\[\[ "\$SOURCE_REF" == "refs\/heads\/\$DEFAULT_BRANCH" &&\n\s+"\$SOURCE_REF_NAME" == "\$DEFAULT_BRANCH" \]\] \|\| \{[\s\S]*?\n\s+\}\n/,
-        "$1              true\n",
-      ),
-  },
-  {
-    name: "release-tag syntax validation",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "production secrets remain isolated",
-    mutate: (source) =>
-      source.replace(
-        '                node scripts/check-release-tag.mjs "$RELEASE_TAG"\n',
-        "",
-      ),
-  },
-  {
-    name: "validated source-only checkout",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "production secrets remain isolated",
-    mutate: (source) =>
-      source.replace(
-        "          ref: ${{ needs.resolve.outputs.source_sha }}",
-        "          ref: ${{ github.sha }}",
-      ),
-  },
-  {
-    name: "E2B pin provenance source checkout",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "E2B template pin provenance",
-    mutate: (source) =>
-      source.replace(
-        "          ref: ${{ needs.resolve.outputs.source_sha }}\n          path: .release-source\n          fetch-depth: 1\n          sparse-checkout: |\n            crates/tidebreak-sandbox-agent/e2b\n          sparse-checkout-cone-mode: false\n\n      - name: Point the client at the published template",
-        "          ref: main\n          path: .release-source\n          fetch-depth: 1\n          sparse-checkout: |\n            crates/tidebreak-sandbox-agent/e2b\n          sparse-checkout-cone-mode: false\n\n      - name: Point the client at the published template",
-      ),
-  },
-  {
-    name: "source validation without credentials",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "production secrets remain isolated",
-    mutate: (source) =>
-      source.replace(
-        "          GH_TOKEN: ${{ github.token }}\n",
-        "          GH_TOKEN: ${{ github.token }}\n          E2B_API_KEY: ${{ secrets.E2B_API_KEY }}\n",
-      ),
-  },
-  {
-    name: "publish-job credential isolation",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "production secrets remain isolated",
-    mutate: (source) =>
-      source.replace(
-        "    env:\n      ALIAS: ${{ needs.resolve.outputs.alias }}\n",
-        "    env:\n      ALIAS: ${{ needs.resolve.outputs.alias }}\n      E2B_API_KEY: ${{ secrets.E2B_API_KEY }}\n",
-      ),
-  },
-  {
-    name: "frozen local E2B CLI installation",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "production secrets remain isolated",
-    mutate: (source) =>
-      source.replace(
-        "pnpm --dir .github/e2b-cli install --frozen-lockfile --ignore-scripts",
-        "npm install --global @e2b/cli@latest",
-      ),
-  },
-  {
-    name: "E2B tooling publication trigger",
-    file: ".github/workflows/publish-e2b-template.yml",
-    expected: "production secrets remain isolated",
-    mutate: (source) => source.replace('      - ".github/e2b-cli/**"\n', ""),
-  },
-  {
-    name: "E2B tooling PR scope",
-    file: ".github/workflows/ci.yml",
-    expected: "PR lanes are scope-gated",
-    mutate: (source) => source.replace(".github/e2b-cli/*|", ""),
-  },
-  {
-    name: "E2B tooling execution lane",
-    file: ".github/workflows/ci.yml",
-    expected: "PR lanes are scope-gated",
-    mutate: (source) =>
-      source.replace(/\n  e2b-cli:\n[\s\S]*?(?=\n  advisories:)/, ""),
   },
   {
     name: "documentation-site execution lane",
@@ -387,88 +298,30 @@ const mutations = [
       ),
   },
   {
-    name: "docs exact release checkout",
-    file: ".github/workflows/release.yml",
-    expected: "release documentation is built from the validated tag",
+    name: "docs deploy from a pull request",
+    file: ".github/workflows/docs.yml",
+    expected: "documentation publishes to GitHub Pages from main",
     mutate: (source) =>
-      editWorkflowJob(source, "build_docs", (job) =>
+      source.replace("  workflow_dispatch:\n", "  workflow_dispatch:\n  pull_request:\n"),
+  },
+  {
+    name: "docs build outside the Pages path",
+    file: ".github/workflows/docs.yml",
+    expected: "documentation publishes to GitHub Pages from main",
+    mutate: (source) =>
+      source.replace("      BASE_PATH: /tidebreak/docs\n", "      BASE_PATH: /tidebreak\n"),
+  },
+  {
+    name: "docs build job holds deploy rights",
+    file: ".github/workflows/docs.yml",
+    expected: "documentation publishes to GitHub Pages from main",
+    mutate: (source) =>
+      editWorkflowJob(source, "build", (job) =>
         job.replace(
-          "          ref: ${{ needs.validate.outputs.sha }}\n",
-          "          ref: main\n",
+          "    permissions:\n      contents: read\n",
+          "    permissions:\n      contents: read\n      pages: write\n",
         ),
       ),
-  },
-  {
-    name: "docs output config test execution",
-    file: ".github/workflows/release.yml",
-    expected: "release documentation is built from the validated tag",
-    mutate: (source) =>
-      editWorkflowJob(source, "build_docs", (job) =>
-        job.replace("          pnpm --dir docs-site test:vercel-output\n", ""),
-      ),
-  },
-  {
-    name: "docs manifest verification before deployment",
-    file: ".github/workflows/release.yml",
-    expected: "release documentation is built from the validated tag",
-    mutate: (source) =>
-      editWorkflowJob(source, "publish_docs", (job) =>
-        job.replace(
-          /      - name: Verify the transferred documentation[\s\S]*?(?=\n      - name: Link the fixed documentation project)/,
-          "",
-        ),
-      ),
-  },
-  {
-    name: "docs deployment token stays out of argv",
-    file: ".github/workflows/release.yml",
-    expected: "release documentation is built from the validated tag",
-    mutate: (source) =>
-      editWorkflowJob(source, "publish_docs", (job) =>
-        job.replace(
-          '            --meta "releaseSha=$RELEASE_SHA" \\\n            --json)',
-          '            --meta "releaseSha=$RELEASE_SHA" \\\n            --token "$VERCEL_TOKEN" \\\n            --json)',
-        ),
-      ),
-  },
-  {
-    name: "docs deployed CSP directive checks",
-    file: ".github/workflows/release.yml",
-    expected: "release documentation is built from the validated tag",
-    mutate: (source) =>
-      editWorkflowJob(source, "publish_docs", (job) =>
-        job.replace(
-          '          grep -Eqi "content-security-policy:.*object-src \'none\'" "$RUNNER_TEMP/docs-headers"\n',
-          "",
-        ),
-      ),
-  },
-  {
-    name: "docs unaliased staging deployment",
-    file: ".github/workflows/release.yml",
-    expected: "release documentation is built from the validated tag",
-    mutate: (source) =>
-      editWorkflowJob(source, "publish_docs", (job) =>
-        job.replace("            --skip-domain \\\n", ""),
-      ),
-  },
-  {
-    name: "docs promotion follows staged checks",
-    file: ".github/workflows/release.yml",
-    expected: "release documentation is built from the validated tag",
-    mutate: (source) =>
-      editWorkflowJob(source, "publish_docs", (job) => {
-        const promote = job.match(
-          /      - name: Promote the verified deployment[\s\S]*?(?=\n      - name: Verify the production alias)/,
-        )?.[0];
-        assert.ok(promote);
-        return job
-          .replace(promote, "")
-          .replace(
-            "      - name: Smoke-test the staged deployment\n",
-            `${promote}\n      - name: Smoke-test the staged deployment\n`,
-          );
-      }),
   },
   {
     name: "source SBOM pinned artifact transfer",
@@ -487,7 +340,7 @@ const mutations = [
     file: ".github/workflows/release.yml",
     expected: "source SBOM generation is isolated from production credentials",
     mutate: (source) =>
-      editWorkflowJob(source, "publish", (job) =>
+      editWorkflowJob(source, "attach_downloads", (job) =>
         job.replace(
           /uses: actions\/download-artifact@[0-9a-f]{40} # v8\n        with:\n          name: tidebreak-source-sbom-/,
           "uses: actions/download-artifact@v8\n        with:\n          name: tidebreak-source-sbom-",
@@ -499,12 +352,127 @@ const mutations = [
     file: ".github/workflows/release.yml",
     expected: "public releases attest provenance without treating the source SBOM as an installer SBOM",
     mutate: (source) =>
-      editWorkflowJob(source, "publish", (job) =>
+      editWorkflowJob(source, "attach_downloads", (job) =>
         job.replace(
           "          subject-checksums: ${{ runner.temp }}/immutable-release-files.sha256\n",
           "          subject-checksums: ${{ runner.temp }}/immutable-release-files.sha256\n          sbom-path: dist/Tidebreak_${{ needs.validate.outputs.version }}_source.spdx.json\n",
         ),
       ),
+  },
+  {
+    name: "release feed outside this repository's downloads",
+    file: ".github/workflows/release.yml",
+    expected: "GitHub release assets are attached before immutable publication",
+    mutate: (source) =>
+      source.replace(
+        "      RELEASE_BASE_URL: https://github.com/${{ github.repository }}/releases/download\n",
+        "      RELEASE_BASE_URL: https://downloads.example.com/tidebreak\n",
+      ),
+  },
+  {
+    name: "release publication through AWS",
+    file: ".github/workflows/release.yml",
+    expected: "releases publish only to GitHub Releases",
+    mutate: (source) =>
+      editWorkflowJob(source, "attach_downloads", (job) =>
+        job.replace(
+          "      - name: Attach or verify the GitHub Release downloads\n",
+          "      - name: Configure AWS credentials\n        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6\n\n      - name: Attach or verify the GitHub Release downloads\n",
+        ),
+      ),
+  },
+  {
+    name: "larger release runner",
+    file: ".github/workflows/release.yml",
+    expected: "releases publish only to GitHub Releases",
+    mutate: (source) =>
+      source.replace(
+        "            runner: windows-latest\n",
+        "            runner: ${{ vars.RELEASE_WINDOWS_X64_RUNNER || 'windows-latest' }}\n",
+      ),
+  },
+  {
+    name: "notarization without Apple signing",
+    file: ".github/workflows/release.yml",
+    expected: "Apple signing is optional",
+    mutate: (source) =>
+      editWorkflowJob(source, "build_macos", (job) =>
+        job.replace(
+          "      - name: Notarize the DMG, then staple the DMG and app\n        if: ${{ steps.signing.outputs.mode == 'developer-id' }}\n",
+          "      - name: Notarize the DMG, then staple the DMG and app\n",
+        ),
+      ),
+  },
+  {
+    name: "job-level Apple identity overrides ad-hoc signing",
+    file: ".github/workflows/release.yml",
+    expected: "Apple signing is optional",
+    mutate: (source) =>
+      editWorkflowJob(source, "build_macos", (job) =>
+        job.replace(
+          "    env:\n      TIDEBREAK_VERSION: ${{ needs.validate.outputs.version }}\n",
+          "    env:\n      TIDEBREAK_VERSION: ${{ needs.validate.outputs.version }}\n      APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}\n",
+        ),
+      ),
+  },
+  {
+    name: "ad-hoc release without a release-note warning",
+    file: ".github/workflows/release.yml",
+    expected: "Apple signing is optional",
+    mutate: (source) =>
+      editWorkflowJob(source, "finalize_release", (job) =>
+        job.replace("ad-hoc signed and not notarized by Apple", "signed"),
+      ),
+  },
+  {
+    name: "voice helper published as a full release",
+    file: ".github/workflows/publish-whisper-helper.yml",
+    expected: "production secrets remain isolated",
+    mutate: (source) => source.replace("            --prerelease\n", "            --latest\n"),
+  },
+  {
+    name: "mobile deploy on every push",
+    file: ".github/workflows/build-mobile.yml",
+    expected: "production secrets remain isolated",
+    mutate: (source) =>
+      source.replace("on:\n  workflow_dispatch:\n", "on:\n  push:\n    branches: [main]\n  workflow_dispatch:\n"),
+  },
+  {
+    name: "mobile deploy fails without an Expo token",
+    file: ".github/workflows/build-mobile.yml",
+    expected: "production secrets remain isolated",
+    mutate: (source) =>
+      source.replace(
+        '            echo "available=false" >> "$GITHUB_OUTPUT"\n',
+        '            exit 1\n',
+      ),
+  },
+  {
+    name: "release uploads unverified updater signatures",
+    file: ".github/workflows/release.yml",
+    expected: "GitHub release assets are attached before immutable publication",
+    mutate: (source) =>
+      source.replace(
+        "          node scripts/verify-updater-signatures.mjs \\\n            --config crates/tidebreak-desktop/tauri.conf.json \\\n            downloads\n",
+        "",
+      ),
+  },
+  {
+    name: "voice helper publishes unverified signatures",
+    file: ".github/workflows/publish-whisper-helper.yml",
+    expected: "production secrets remain isolated",
+    mutate: (source) =>
+      source.replace(
+        /      - name: Verify every helper signature against the updater key\n[\s\S]*?(?=\n      # `gh release create`)/,
+        "",
+      ),
+  },
+  {
+    name: "a disabled image workflow fails a public release",
+    file: ".github/workflows/release.yml",
+    expected: "publishing a release dispatches the server image build",
+    mutate: (source) =>
+      source.replace("          if ! gh workflow run publish-server-image.yml \\\n", "          gh workflow run publish-server-image.yml \\\n"),
   },
   {
     name: "signing job pnpm pin",
@@ -612,7 +580,6 @@ const mutations = [
   },
   ...[
     { file: ".github/workflows/release.yml", prepare: "prepare_macos", build: "build_macos" },
-    { file: ".github/workflows/staging-publish.yml", prepare: "prepare_macos_staging", build: "build_macos_staging" },
   ].flatMap(({ file, prepare, build }) => [
     {
       name: `${prepare} helper checksum omission`,

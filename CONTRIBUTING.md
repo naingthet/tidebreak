@@ -182,9 +182,9 @@ the lane alone finds no server.
 
 ## Merging
 
-Every pull request to `main` needs an approving review from
-`@brightwave-inc/engineering`. Members of that team can merge without waiting
-for the review. Squash-merge when the required checks pass.
+The maintainer, [@naingthet](https://github.com/naingthet), reviews pull
+requests and owns every path (see [`.github/CODEOWNERS`](.github/CODEOWNERS)).
+Squash-merge when the required checks pass.
 
 ## License
 

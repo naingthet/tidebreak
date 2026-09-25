@@ -23,8 +23,8 @@ export class SignedOutError extends Error {
  * confined client asking for a resource its registration does not name gets
  * HTTP 400 `invalid_resource` (mg `cli_auth.rs`), the same status a revoked
  * refresh family returns. Treating that as a sign-out would mean one console
- * screen probing a gateway that has not been widened yet
- * (brightwave-inc/model-gateway#2044) throws the user out of a working machine
+ * screen probing a gateway whose client registration has not been widened yet
+ * throws the user out of a working machine
  * session. The surface that asked degrades; the pairing stands.
  */
 export class ResourceRefusedError extends Error {

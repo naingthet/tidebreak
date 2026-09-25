@@ -7,7 +7,6 @@ is React/TypeScript under `crates/tidebreak-desktop/ui`.
 
 ## Hard rules
 
-- Do not use the `bw` CLI. Use this repository's Cargo, pnpm, and GitHub commands.
 - Branch off `main`; PR back into `main`. Never commit straight to `main`.
 - Commit or push only when asked. Do not merge unless the request was to merge.
 - For parallel-track work, claim the GitHub issue (assignee + `in-progress`)
@@ -27,10 +26,10 @@ is React/TypeScript under `crates/tidebreak-desktop/ui`.
 
 ## GitHub tracking
 
-The [Tidebreak GitHub Project](https://github.com/orgs/brightwave-inc/projects/5)
-is the board. Milestones are delivery buckets. Parked product ideas stay in
+[Issues](https://github.com/naingthet/tidebreak/issues) and milestones track
+the work. Milestones are delivery buckets. Parked product ideas stay in
 [`docs/deferred.md`](docs/deferred.md) until a slice is buildable; do not copy
-that list onto the board.
+that list into issues.
 
 - Open an issue only for a bounded outcome with an owner. Do not file per-file
   or per-session tasks.
@@ -84,7 +83,7 @@ feel like Tidebreak.
 ## Pointers
 
 - Humans and commit/PR titles: [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- Board: [Tidebreak GitHub Project](https://github.com/orgs/brightwave-inc/projects/5)
+- Issues: [github.com/naingthet/tidebreak/issues](https://github.com/naingthet/tidebreak/issues)
 - Decisions: [`docs/decisions/`](docs/decisions)
 - Parked scope: [`docs/deferred.md`](docs/deferred.md)
 - Releases: [`docs/releases.md`](docs/releases.md)

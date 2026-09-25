@@ -87,7 +87,7 @@ const meta = {
   args: {
     client: client(stored) as never,
     repoId: "repo-tidebreak",
-    repoLabel: "brightwave-inc/tidebreak",
+    repoLabel: "octo-org/tidebreak",
     onSaved: fn(),
   },
   decorators: [

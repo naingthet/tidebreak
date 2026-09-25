@@ -5,9 +5,6 @@
 
 <h1 align="center">Tidebreak</h1>
 
-> [!NOTE]
-> Tidebreak's home is now **[github.com/naingthet/tidebreak](https://github.com/naingthet/tidebreak)**. This repository stays in place at v1.0.0. Development, releases, and updates continue there: v1.0.0 and later check that repository for updates.
-
 <p align="center">
   <strong>The open-source, local-first desktop for AI coding agents and finished work.</strong>
 </p>
@@ -17,19 +14,18 @@
 </p>
 
 <p align="center">
-  <a href="https://www.tidebreak.io">Website</a> ·
   <a href="#downloads">Download</a> ·
-  <a href="https://www.tidebreak.io/docs/quickstart/">Quickstart</a> ·
-  <a href="https://www.tidebreak.io/docs/">Documentation</a> ·
+  <a href="https://naingthet.github.io/tidebreak/docs/quickstart/">Quickstart</a> ·
+  <a href="https://naingthet.github.io/tidebreak/docs/">Documentation</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/brightwave-inc/tidebreak/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/brightwave-inc/tidebreak/ci.yml?branch=main&amp;style=flat-square&amp;logo=githubactions&amp;logoColor=white&amp;label=CI" alt="CI status"></a>
-  <a href="https://github.com/brightwave-inc/tidebreak/releases/latest"><img src="https://img.shields.io/github/v/release/brightwave-inc/tidebreak?style=flat-square&amp;logo=github&amp;label=release" alt="Latest release"></a>
-  <a href="https://github.com/brightwave-inc/tidebreak/releases"><img src="https://img.shields.io/github/downloads/brightwave-inc/tidebreak/total?style=flat-square&amp;logo=github&amp;label=downloads" alt="Total downloads"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/brightwave-inc/tidebreak?style=flat-square&amp;label=license" alt="Apache-2.0 license"></a>
-  <a href="https://www.tidebreak.io/docs/roadmap/"><img src="https://img.shields.io/badge/status-pre--1.0-F59E0B?style=flat-square" alt="Project status: pre-1.0"></a>
+  <a href="https://github.com/naingthet/tidebreak/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/naingthet/tidebreak/ci.yml?branch=main&amp;style=flat-square&amp;logo=githubactions&amp;logoColor=white&amp;label=CI" alt="CI status"></a>
+  <a href="https://github.com/naingthet/tidebreak/releases/latest"><img src="https://img.shields.io/github/v/release/naingthet/tidebreak?style=flat-square&amp;logo=github&amp;label=release" alt="Latest release"></a>
+  <a href="https://github.com/naingthet/tidebreak/releases"><img src="https://img.shields.io/github/downloads/naingthet/tidebreak/total?style=flat-square&amp;logo=github&amp;label=downloads" alt="Total downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/naingthet/tidebreak?style=flat-square&amp;label=license" alt="Apache-2.0 license"></a>
+  <a href="https://naingthet.github.io/tidebreak/docs/roadmap/"><img src="https://img.shields.io/badge/status-pre--1.0-F59E0B?style=flat-square" alt="Project status: pre-1.0"></a>
 </p>
 
 <p align="center">
@@ -61,15 +57,15 @@ Provider credentials stay in the operating system's credential store. Chats,
 outputs, code sessions, and workspace metadata stay in your local Tidebreak
 profile unless you connect an external service.
 
-Brightwave built the original engine for three years of private-equity
-diligence, then rewrote it in Rust and released it as Tidebreak.
+The engine was first built for three years of private-equity diligence, then
+rewritten in Rust and released as Tidebreak.
 
 > [!WARNING]
 > Tidebreak is pre-1.0. Interfaces and local data formats may change between
-> releases. Windows and Linux packages exist for x86_64 and ARM64, but new
-> builds are paused: the links below serve the last Windows and Linux builds
-> that shipped, and some platform-specific capabilities remain macOS-only and
-> appear as unavailable in the app.
+> releases. Windows and Linux packages exist for x86_64 and ARM64, but their
+> builds are paused: the Windows and Linux links below work only once a release
+> includes those platforms, and some platform-specific capabilities remain
+> macOS-only and appear as unavailable in the app.
 
 ## Code mode
 
@@ -95,7 +91,7 @@ for hands-on coding. Use Tidebreak to coordinate agents, isolate their work,
 review what they changed, and carry the result through CI and pull request
 delivery.
 
-The [Code mode guide](https://www.tidebreak.io/docs/code-mode/) covers engines,
+The [Code mode guide](https://naingthet.github.io/tidebreak/docs/code-mode/) covers engines,
 repositories, workspaces, permissions, review, and pull request delivery.
 
 ## Work mode
@@ -132,8 +128,7 @@ conversation around the work.
 | **Extensions** | Built-in and personal skills, plugins, MCP servers and apps, OpenAPI-backed connected apps, local apps, web search, browser tools, and computer use. |
 | **Interfaces** | Tauri desktop app, headless server, command-line client, local HTTP and WebSocket API, and an MCP server surface. The desktop and headless clients share the same Rust runtime. |
 
-The [website](https://www.tidebreak.io) gives the product overview. The
-[documentation](https://www.tidebreak.io/docs/) covers installation,
+The [documentation](https://naingthet.github.io/tidebreak/docs/) covers installation,
 providers, permissions, connected folders, execution, outputs, extensions,
 Code mode, and the headless interface.
 
@@ -166,12 +161,12 @@ execution providers that you choose; the Tidebreak desktop adds no usage fee.
 
 | Platform | Packages | Notes |
 | --- | --- | --- |
-| **macOS** | [Universal `.dmg`](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-macos-universal.dmg) | Apple Silicon and Intel; signed and notarized |
-| **Windows** | [x86_64 installer](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-windows-x86_64-setup.exe) · [ARM64 installer](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-windows-aarch64-setup.exe) | Builds paused; this is the last installer that shipped. Windows may show a SmartScreen warning while installers are not Authenticode-signed |
-| **Linux** | x86_64 [AppImage](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.AppImage) / [`.deb`](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.deb) · ARM64 [AppImage](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.AppImage) / [`.deb`](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.deb) | Builds paused; these are the last packages that shipped. Built on Ubuntu 22.04; use a compatible glibc-based distribution |
+| **macOS** | [Universal `.dmg`](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-macos-universal.dmg) | Apple Silicon and Intel. The release notes say when a build is not notarized; the installation guide shows how to open one |
+| **Windows** | [x86_64 installer](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-windows-x86_64-setup.exe) · [ARM64 installer](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-windows-aarch64-setup.exe) | Builds paused; the links work once a release includes Windows. Windows may show a SmartScreen warning while installers are not Authenticode-signed |
+| **Linux** | x86_64 [AppImage](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.AppImage) / [`.deb`](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.deb) · ARM64 [AppImage](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.AppImage) / [`.deb`](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.deb) | Builds paused; the links work once a release includes Linux. Built on Ubuntu 22.04; use a compatible glibc-based distribution |
 
 Every package has a `.sha256` sidecar on the release. See the
-[installation guide](https://www.tidebreak.io/docs/installation/) for checksum
+[installation guide](https://naingthet.github.io/tidebreak/docs/installation/) for checksum
 commands, Linux runtime requirements, updates, and platform limits.
 
 ## Quick start
@@ -188,7 +183,7 @@ commands, Linux runtime requirements, updates, and platform limits.
 5. Review the output. Export a file version from **Work**, or inspect the diff,
    checks, and review state before you merge from **Code**.
 
-The [full quickstart](https://www.tidebreak.io/docs/quickstart/) explains a
+The [full quickstart](https://naingthet.github.io/tidebreak/docs/quickstart/) explains a
 first file-backed task and the approval prompts you will see.
 
 ## Data, privacy, and security
@@ -211,8 +206,8 @@ reach. Overwriting a connected file always asks. In Code mode, the agent can
 prepare and repair a pull request, but only you invoke merge.
 
 Start with the
-[permission guide](https://www.tidebreak.io/docs/permission-modes/) and
-[code-execution guide](https://www.tidebreak.io/docs/code-execution/). Report
+[permission guide](https://naingthet.github.io/tidebreak/docs/permission-modes/) and
+[code-execution guide](https://naingthet.github.io/tidebreak/docs/code-execution/). Report
 vulnerabilities privately through [`SECURITY.md`](SECURITY.md), not a public
 issue.
 
@@ -258,7 +253,7 @@ export TIDEBREAK_DATA_DIR="$PWD/.tidebreak"
 ANTHROPIC_API_KEY=sk-... cargo run -p tidebreak-cli -- serve
 ```
 
-See the [headless documentation](https://www.tidebreak.io/docs/headless/) for
+See the [headless documentation](https://naingthet.github.io/tidebreak/docs/headless/) for
 one-shot mode, the HTTP API, MCP server, configuration, and self-hosting.
 
 ## Repository guide
@@ -287,12 +282,12 @@ opening a substantial change. Decisions that future work must preserve live in
 
 ## Support
 
-- Read the [troubleshooting guide](https://www.tidebreak.io/docs/troubleshooting/)
+- Read the [troubleshooting guide](https://naingthet.github.io/tidebreak/docs/troubleshooting/)
   for installation, provider, execution, and local-state problems.
-- [Open a bug report](https://github.com/brightwave-inc/tidebreak/issues/new?template=bug-report.yml)
+- [Open a bug report](https://github.com/naingthet/tidebreak/issues/new?template=bug-report.yml)
   with a reproducible case and [diagnostics](docs/diagnostics.md) scrubbed of
   sensitive data.
-- [Request a feature](https://github.com/brightwave-inc/tidebreak/issues/new?template=feature-request.yml)
+- [Request a feature](https://github.com/naingthet/tidebreak/issues/new?template=feature-request.yml)
   by describing the workflow and desired outcome.
 - Follow [`SECURITY.md`](SECURITY.md) to report a vulnerability privately.
 

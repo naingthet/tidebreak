@@ -12,8 +12,8 @@
  * always means "do not ask".
  *
  * The advertisement that matters is `surfaces.tidebreak_mobile_console`: this
- * installation's `tidebreak-mobile` client may hold the console resources
- * (brightwave-inc/model-gateway#2044). `surfaces.control_plane_write` is *not*
+ * installation's `tidebreak-mobile` client may hold the console resources.
+ * `surfaces.control_plane_write` is *not*
  * a substitute — it is a binary-wide fact about the scope vocabulary, true on
  * gateways deployed today whose `tidebreak-mobile` client is still confined to
  * `control` + `tidebreak:*`. Gating on it alone would break sign-in against

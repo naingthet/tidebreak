@@ -23,8 +23,7 @@ export function runtimeResource(slug: string): string {
  * `runtime:<slug>`. It bounds what a bug or a hostile response can talk this
  * client into requesting — inference and MCP credentials stay unreachable —
  * while the gateway's own client registration remains the real boundary. A
- * gateway that has not been widened yet (brightwave-inc/model-gateway#2044)
- * refuses the console resources with `invalid_resource`, which `TokenStore`
+ * gateway that has not been widened yet refuses the console resources with `invalid_resource`, which `TokenStore`
  * surfaces as a `ResourceRefusedError` rather than a sign-out.
  */
 export function isAllowedResource(resource: string): boolean {

@@ -4,8 +4,8 @@ description = "Tidebreak's whisper.cpp transcription helper: a one-shot binary t
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/brightwave-inc/tidebreak"
-authors = ["Brightwave, Inc."]
+repository = "https://github.com/naingthet/tidebreak"
+authors = ["Tidebreak contributors"]
 publish = false
 
 # A workspace of one. The root workspace excludes this crate so that no

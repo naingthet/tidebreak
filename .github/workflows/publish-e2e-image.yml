@@ -2,9 +2,8 @@
 # `dev` cargo profile, so the scripted harness
 # (`crates/tidebreak-server/src/scripted_harness.rs`, compiled only under
 # debug assertions) is present and a lane can drive a real machine without a
-# model. The Model Gateway repository's Slack adapter lane pulls
-# `ghcr.io/brightwave-inc/tidebreak-server-e2e:main` (issue
-# brightwave-inc/model-gateway#1865).
+# model. Model Gateway's Slack adapter lane pulls it by its `main` tag,
+# `ghcr.io/<owner>/tidebreak-server-e2e:main`.
 #
 # This image is a test fixture. It is never attested, never tagged with a
 # release version, and never a candidate for the managed machine, which tracks

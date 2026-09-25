@@ -11,7 +11,7 @@
 
 ## Context
 
-`publish-server-image.yml` builds `ghcr.io/brightwave-inc/tidebreak-server`
+`publish-server-image.yml` builds `ghcr.io/naingthet/tidebreak-server`
 on every release, on a weekly schedule that flushes base-image patches into
 the same version tag, and on manual dispatch. A consumer that pins the image
 pins a digest, and nothing on the registry says where that digest came from:
@@ -44,11 +44,11 @@ statement.
    digest is exactly the digest a consumer next adopts.
 2. **Attestations are stored with the repository and pushed to the
    registry.** The bundle lands in GitHub's attestation store for
-   `brightwave-inc/tidebreak` and is also attached to the image as an OCI
+   `naingthet/tidebreak` and is also attached to the image as an OCI
    referrer, so `gh attestation verify` and `cosign` both find it.
 3. **The workflow path is a public contract.** A verifier identifies the
    image by the signing certificate's identity:
-   `https://github.com/brightwave-inc/tidebreak/.github/workflows/publish-server-image.yml`
+   `https://github.com/naingthet/tidebreak/.github/workflows/publish-server-image.yml`
    followed by the ref the run used. Renaming or moving that file changes
    the identity of every image published afterwards and must be treated as
    a breaking change to consumers that verify provenance.
@@ -86,7 +86,7 @@ desktop bundles, and any change to how the image is built.
 
 ## Validation
 
-- `gh attestation verify oci://ghcr.io/brightwave-inc/tidebreak-server:<version> -R brightwave-inc/tidebreak`
+- `gh attestation verify oci://ghcr.io/naingthet/tidebreak-server:<version> -R naingthet/tidebreak`
   succeeds for the first release published after this record merges, and
   the printed signer identity names `publish-server-image.yml`.
 - The same command against a digest pushed outside the workflow reports no

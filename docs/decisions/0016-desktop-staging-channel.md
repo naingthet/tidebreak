@@ -59,8 +59,8 @@ lifecycle.
 Staging is hosted under its own prefix and feed:
 
 ```text
-https://downloads.brightwave.io/tidebreak/staging/latest.json
-https://downloads.brightwave.io/tidebreak/staging/releases/v0.0.0-staging.N/
+https://<download host>/tidebreak/staging/latest.json
+https://<download host>/tidebreak/staging/releases/v0.0.0-staging.N/
 ```
 
 Production `latest.json` and `tidebreak/releases/` are unreachable from this

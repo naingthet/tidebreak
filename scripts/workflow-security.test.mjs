@@ -26,7 +26,7 @@ const workflows = Object.fromEntries(
     .map((name) => [name, readFileSync(join(workflowDirectory, name), "utf8")]),
 );
 const compilerCacheAction = readFileSync(
-  repositoryFile(".github", "actions", "setup-sccache-s3", "action.yml"),
+  repositoryFile(".github", "actions", "setup-sccache", "action.yml"),
   "utf8",
 );
 const releaseDrafterConfig = readFileSync(
@@ -86,14 +86,8 @@ const selfHostDockerfile = readFileSync(
   "utf8",
 );
 const denyConfig = readFileSync(repositoryFile("deny.toml"), "utf8");
-const e2bPackage = JSON.parse(
-  readFileSync(repositoryFile(".github", "e2b-cli", "package.json"), "utf8"),
-);
 const docsPackage = JSON.parse(
   readFileSync(repositoryFile("docs-site", "package.json"), "utf8"),
-);
-const vercelCliPackage = JSON.parse(
-  readFileSync(repositoryFile(".github", "vercel-cli", "package.json"), "utf8"),
 );
 const tauriCliPackagePath = repositoryFile(
   ".github",
@@ -143,8 +137,8 @@ function semanticTitleCheck() {
   assert.fail("no workflow defines the semantic PR title job");
 }
 
-test("the Brightwave engineering team owns repository changes", () => {
-  assert.equal(codeOwners.trim(), "* @brightwave-inc/engineering");
+test("the maintainer owns repository changes", () => {
+  assert.equal(codeOwners.trim(), "* @naingthet");
 });
 
 const DESKTOP_SIGNING_JOBS = [
@@ -152,11 +146,6 @@ const DESKTOP_SIGNING_JOBS = [
     file: "release.yml",
     name: "build_macos",
     validate: "Validate production signing configuration",
-  },
-  {
-    file: "staging-publish.yml",
-    name: "build_macos_staging",
-    validate: "Validate staging signing configuration",
   },
   {
     file: "release.yml",
@@ -392,6 +381,11 @@ test("publishing a release dispatches the server image build", () => {
     /if: \$\{\{ needs\.validate\.outputs\.draft == 'true' \}\}/,
   );
 
+  // The release is public by the time these run, so a disabled workflow warns
+  // instead of failing the run and skipping the draft refresh.
+  assert.match(finalizeJob, /if ! gh workflow run publish-server-image\.yml/);
+  assert.match(finalizeJob, /if ! gh workflow run release-draft\.yml/);
+
   // The declared trigger stays for a release published by hand in the UI.
   assert.match(
     workflows["publish-server-image.yml"],
@@ -421,7 +415,6 @@ test("PR lanes are scope-gated, never label-gated", () => {
   const ci = workflows["ci.yml"];
   const changes = workflowJob(ci, "changes");
   const docsSite = workflowJob(ci, "docs-site");
-  const e2bCli = workflowJob(ci, "e2b-cli");
   const fmt = workflowJob(ci, "fmt");
   const postgres = workflowJob(ci, "postgres");
   const testPartitions = workflowJob(ci, "test");
@@ -475,7 +468,7 @@ test("PR lanes are scope-gated, never label-gated", () => {
     /sed -i/,
     "the trusted policy runs as checked in; do not rewrite it",
   );
-  assert.match(title.job, /CANONICAL_REPOSITORY: brightwave-inc\/tidebreak/);
+  assert.match(title.job, /CANONICAL_REPOSITORY: naingthet\/tidebreak/);
   assert.match(
     title.job,
     /repos\/\$CANONICAL_REPOSITORY\/pulls\/\$PR_NUMBER/,
@@ -483,7 +476,7 @@ test("PR lanes are scope-gated, never label-gated", () => {
   const releaseDraft = workflows["release-draft.yml"];
   assert.match(
     releaseDraft,
-    /CANONICAL_REPOSITORY: brightwave-inc\/tidebreak/,
+    /CANONICAL_REPOSITORY: naingthet\/tidebreak/,
   );
   assert.match(
     workflowJob(releaseDraft, "label"),
@@ -524,7 +517,6 @@ test("PR lanes are scope-gated, never label-gated", () => {
     [workflowJob(ci, "ui"), "ui"],
     [workflowJob(ci, "storybook-a11y"), "ui"],
     [docsSite, "docs_site"],
-    [e2bCli, "e2b_cli"],
   ]) {
     assert.match(
       job,
@@ -573,37 +565,18 @@ test("PR lanes are scope-gated, never label-gated", () => {
   assert.doesNotMatch(ci, /outputs\.parsers|echo "parsers=/);
   assert.match(changes, /\*\.md\|docs\/\*\|assets\/\*\|\.githooks\/\*/);
 
-  // Documentation and publication tooling each have a pre-merge execution
-  // lane. A tooling-only Dependabot update must not fall through to unrelated
-  // Rust jobs, and edits to either workflow force its own lane.
-  assert.match(changes, /docs-site\/\*\) docs_site=true/);
+  // The documentation site has a pre-merge execution lane. A docs-only
+  // Dependabot update must not fall through to unrelated Rust jobs, and an
+  // edit to the Pages workflow runs the same lane.
   assert.match(
     changes,
-    /\.github\/e2b-cli\/\*\|\.github\/workflows\/publish-e2b-template\.yml\)\n\s+e2b_cli=true/,
+    /docs-site\/\*\|\.github\/workflows\/docs\.yml\) docs_site=true/,
   );
   assert.match(changes, /echo "docs_site=true"/);
-  assert.match(changes, /echo "e2b_cli=true"/);
   assert.match(docsSite, /pnpm install --frozen-lockfile/);
   assert.match(docsSite, /run: pnpm types:check/);
   assert.match(docsSite, /run: pnpm lint/);
   assert.match(docsSite, /run: pnpm build/);
-
-  assert.equal(e2bPackage.packageManager, "pnpm@10.18.3");
-  assert.match(e2bCli, /version: 10\.18\.3/);
-  assert.match(e2bCli, /node-version: 22/);
-  assert.match(
-    e2bCli,
-    /pnpm --dir \.github\/e2b-cli install --frozen-lockfile --ignore-scripts/,
-  );
-  assert.match(
-    e2bCli,
-    /\.github\/e2b-cli\/node_modules\/\.bin\/e2b --version/,
-  );
-  assert.match(
-    e2bCli,
-    /dependencies\['@e2b\/cli'\]/,
-  );
-  assert.doesNotMatch(e2bCli, /npm install|@latest/);
 
   const desktop = workflowJob(ci, "desktop");
   // The lane may run the desktop tests under cargo test or, once its
@@ -668,7 +641,8 @@ test("Windows cargo check is rust-scoped and skips superseded main pushes", () =
   const changes = workflowJob(ci, "changes");
   assert.match(windowsCheck, /name: Windows cargo check/);
   assert.match(windowsCheck, /Check the Windows installer crates/);
-  assert.match(windowsCheck, /vars\.CI_WINDOWS_RUNNER \|\| 'windows-latest'/);
+  // Standard hosted runners are free for a public repository.
+  assert.match(windowsCheck, /runs-on: windows-latest\n/);
   assert.match(windowsCheck, /Stage sidecar placeholders for cargo check/);
   assert.doesNotMatch(windowsCheck, /prepare-sidecar\.mjs/);
   for (const crate of [
@@ -696,12 +670,9 @@ test("Windows cargo check is rust-scoped and skips superseded main pushes", () =
     /cancel-in-progress/,
     "cancelling this lane reddens a commit whose own checks all passed",
   );
-  assert.match(windowsCheck, /id-token: write/);
+  assert.doesNotMatch(windowsCheck, /id-token: write/);
   assert.match(windowsCheck, /RUSTC_WRAPPER: sccache/);
-  assert.match(
-    windowsCheck,
-    /uses: \.\/\.github\/actions\/setup-sccache-s3/,
-  );
+  assert.match(windowsCheck, /uses: \.\/\.github\/actions\/setup-sccache\n/);
 });
 
 test("PostgreSQL tests share one Cargo invocation per feature graph", () => {
@@ -861,7 +832,7 @@ test("macOS CI exercises Seatbelt and the egress broker without signing setup", 
   assert.doesNotMatch(sandbox, /continue-on-error|--ignored|\|\| true/);
 });
 
-test("compiler caches use OIDC-scoped S3 access", () => {
+test("compiler caches use the GitHub Actions cache, read-only for pull requests", () => {
   const ci = workflows["ci.yml"];
   const ciJobs = [
     "lint",
@@ -874,43 +845,40 @@ test("compiler caches use OIDC-scoped S3 access", () => {
     "self-host-build",
   ];
 
-  assert.match(compilerCacheAction, /SCCACHE_BUCKET=bw-rust-sccache-767397701846/);
-  assert.match(compilerCacheAction, /SCCACHE_REGION=us-east-1/);
-  assert.match(compilerCacheAction, /SCCACHE_S3_KEY_PREFIX=rust-v1/);
   assert.match(compilerCacheAction, /read\) cache_mode=READ_ONLY/);
   assert.match(compilerCacheAction, /write\) cache_mode=READ_WRITE/);
-  assert.match(compilerCacheAction, /SCCACHE_S3_RW_MODE=\$cache_mode/);
-  assert.match(compilerCacheAction, /SCCACHE_S3_SERVER_SIDE_ENCRYPTION=true/);
-  assert.match(
-    compilerCacheAction,
-    /inputs\.access == 'write'.*bw-github-ci-sccache-write-role.*bw-github-ci-sccache-read-role/,
-  );
-  assert.match(
-    compilerCacheAction,
-    /uses: aws-actions\/configure-aws-credentials@[0-9a-f]{40}/,
-  );
+  assert.match(compilerCacheAction, /SCCACHE_GHA_ENABLED=true/);
+  assert.match(compilerCacheAction, /SCCACHE_GHA_RW_MODE=\$cache_mode/);
   assert.match(
     compilerCacheAction,
     /uses: mozilla-actions\/sccache-action@[0-9a-f]{40}/,
   );
+  assert.doesNotMatch(
+    compilerCacheAction,
+    /SCCACHE_BUCKET|SCCACHE_S3_|configure-aws-credentials|role-to-assume|arn:aws/,
+  );
+  const steps = compilerCacheAction.split(/^    - name: /m).slice(1);
+  const install = steps.find((entry) => entry.startsWith("Install sccache\n"));
+  assert.ok(install, "every run must install sccache");
+  assert.doesNotMatch(install, /^      if:/m);
   assert.ok(
     compilerCacheAction.indexOf("- name: Configure compiler cache environment") <
-      compilerCacheAction.indexOf("- name: Authenticate to the compiler cache") &&
-      compilerCacheAction.indexOf("- name: Authenticate to the compiler cache") <
-        compilerCacheAction.indexOf("- name: Install sccache"),
-    "the S3 environment and credentials must exist before the sccache server starts",
+      compilerCacheAction.indexOf("- name: Install sccache"),
+    "the cache settings must exist before the sccache server starts",
+  );
+  assert.equal(
+    existsSync(repositoryFile(".github", "actions", "setup-sccache-s3")),
+    false,
   );
 
-  const forkGuard =
-    "remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}";
   const accessMode =
     "access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}";
   for (const name of ciJobs) {
     const job = workflowJob(ci, name);
-    assert.match(job, /permissions:\n      contents: read\n      id-token: write/);
-    assert.match(job, /uses: \.\/\.github\/actions\/setup-sccache-s3/);
+    assert.match(job, /permissions:\n      contents: read\n/);
+    assert.doesNotMatch(job, /id-token: write/, `${name} needs no OIDC token`);
+    assert.match(job, /uses: \.\/\.github\/actions\/setup-sccache\n/);
     assert.ok(job.includes(accessMode), `${name} must keep pull requests read-only`);
-    assert.ok(job.includes(forkGuard), `${name} must skip OIDC on fork pull requests`);
   }
 
   for (const [file, name] of [
@@ -918,45 +886,18 @@ test("compiler caches use OIDC-scoped S3 access", () => {
     ["release.yml", "prepare_windows"],
     ["release.yml", "prepare_windows_desktop"],
     ["release.yml", "build_linux"],
-    ["staging-publish.yml", "prepare_macos_staging"],
   ]) {
     const job = workflowJob(workflows[file], name);
-    assert.match(job, /permissions:\n      contents: read\n      id-token: write/);
-    assert.match(job, /uses: \.\/\.github\/actions\/setup-sccache-s3/);
+    assert.match(job, /permissions:\n      contents: read\n/);
+    assert.doesNotMatch(job, /id-token: write/, `${name} needs no OIDC token`);
+    assert.match(job, /uses: \.\/\.github\/actions\/setup-sccache\n/);
     assert.match(job, /access: write/);
   }
 
   assert.equal(workflows["cache-cleanup.yml"], undefined);
-  for (const name of [
-    "ci.yml",
-    "release.yml",
-    "staging-publish.yml",
-  ]) {
-    assert.doesNotMatch(workflows[name], /SCCACHE_GHA_/);
+  for (const name of ["ci.yml", "release.yml"]) {
+    assert.doesNotMatch(workflows[name], /SCCACHE_GHA_|SCCACHE_BUCKET/);
   }
-});
-
-test("manual feature-branch validation keeps compiler cache local", () => {
-  const remoteGuard =
-    "if: ${{ inputs.remote-cache-enabled == 'true' && (github.event_name != 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) }}";
-  const steps = compilerCacheAction.split(/^    - name: /m).slice(1);
-  for (const name of [
-    "Configure compiler cache environment",
-    "Authenticate to the compiler cache",
-  ]) {
-    const step = steps.find((entry) => entry.startsWith(name + "\n"));
-    assert.ok(
-      step?.includes(remoteGuard),
-      name + " must exclude off-default manual runs",
-    );
-  }
-  const install = steps.find((entry) => entry.startsWith("Install sccache\n"));
-  assert.ok(install, "every run must install the local compiler cache");
-  assert.doesNotMatch(install, /^      if:/m);
-  assert.doesNotMatch(
-    install,
-    /SCCACHE_BUCKET|configure-aws-credentials|role-to-assume/,
-  );
 });
 
 test("production secrets remain isolated to the release workflow", () => {
@@ -965,11 +906,8 @@ test("production secrets remain isolated to the release workflow", () => {
     .map(([name]) => name);
   const allowedSecretConsumers = new Set([
     "build-mobile.yml",
-    "publish-e2b-template.yml",
     "publish-whisper-helper.yml",
-    "release-draft.yml",
     "release.yml",
-    "staging-publish.yml",
   ]);
   for (const name of secretConsumers) {
     assert.ok(
@@ -978,27 +916,17 @@ test("production secrets remain isolated to the release workflow", () => {
     );
   }
 
-  // The release draft may read exactly one secret: the private key of the
-  // GitHub App whose token replaces GITHUB_TOKEN for the draft job, so the
-  // release API calls stop sharing the repository's Actions rate budget. The
-  // key stays out of the label and backfill jobs: the label job runs on
-  // pull_request_target events, and neither job needs more than GITHUB_TOKEN.
+  // Release drafting runs on the workflow's own GITHUB_TOKEN and reads no
+  // secret, so a pull_request_target run of the label job has nothing to leak.
   const releaseDraftSource = workflows["release-draft.yml"];
-  for (const secret of releaseDraftSource.match(/secrets\.[A-Za-z0-9_]+/g) ?? []) {
-    assert.equal(
-      secret,
-      "secrets.RELEASE_APP_PRIVATE_KEY",
-      `release-draft.yml may read only the app private key, found ${secret}`,
-    );
-  }
-  for (const job of ["label", "backfill"]) {
-    assert.doesNotMatch(
-      workflowJob(releaseDraftSource, job),
-      /secrets\./,
-      `the ${job} job must stay on GITHUB_TOKEN`,
-    );
-  }
-  assert.ok(secretConsumers.includes("publish-e2b-template.yml"));
+  assert.doesNotMatch(
+    releaseDraftSource,
+    /secrets\.|create-github-app-token|RELEASE_APP_/,
+    "release-draft.yml must stay on GITHUB_TOKEN",
+  );
+  const draftJob = workflowJob(releaseDraftSource, "draft");
+  assert.match(draftJob, /permissions:\n      contents: write\n      pull-requests: read\n/);
+  assert.match(draftJob, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
   assert.ok(secretConsumers.includes("release.yml"));
 
   const release = workflows["release.yml"];
@@ -1028,140 +956,67 @@ test("production secrets remain isolated to the release workflow", () => {
     const whisperPublish = workflowJob(whisper, "publish");
     assert.match(whisperPublish, /tauri signer sign "\$file"/);
     assert.doesNotMatch(whisperPublish, /cargo tauri signer sign/);
-  }
-
-  // The E2B template publish is the one other workflow allowed a secret, and
-  // only because it can never run from a pull request: it triggers on pushes
-  // to main touching the template definition, plus manual dispatch. Its
-  // credential is scoped to E2B — it must not reach the signing secrets.
-  const e2b = workflows["publish-e2b-template.yml"];
-  const resolveJob = workflowJob(e2b, "resolve");
-  const publishJob = workflowJob(e2b, "publish");
-  assert.match(e2b, /^on:\n  push:\n    branches: \[main\]\n    paths:\n/m);
-  assert.match(e2b, /^      - "\.github\/e2b-cli\/\*\*"$/m);
-  assert.match(e2b, /^  workflow_dispatch:\n/m);
-  assert.match(
-    e2b,
-    /^      release_tag:\n(?:        .*\n)+?        type: string$/m,
-  );
-  assert.doesNotMatch(e2b, /^\s*pull_request(?:_target)?:/m);
-  assert.match(e2b, /^permissions:\n  contents: read$/m);
-  assert.deepEqual(
-    [...new Set(e2b.match(/secrets\.[A-Z0-9_]+/g))].sort(),
-    // Assembled rather than written out: a literal list of quoted
-    // secret-shaped names reads as a credential to the secret scanner.
-    ["ACCESS_TOKEN", "API_KEY"].map((suffix) => `secrets.E2B_${suffix}`),
-  );
-
-  // A manual run must execute the current default-branch workflow. A release
-  // tag is validated as input and resolved to a commit for a sparse source-only
-  // checkout; it can never supply the workflow or locked CLI definition.
-  assert.match(resolveJob, /DEFAULT_BRANCH: \$\{\{ github\.event\.repository\.default_branch \}\}/);
-  assert.equal(
-    resolveJob.match(
-      /SOURCE_REF" == "refs\/heads\/\$DEFAULT_BRANCH" &&\n\s+"\$SOURCE_REF_NAME" == "\$DEFAULT_BRANCH"/g,
-    )?.length,
-    2,
-    "both push and workflow_dispatch must require the default-branch ref",
-  );
-  assert.doesNotMatch(resolveJob, /SOURCE_REF" == "refs\/tags\//);
-  assert.match(resolveJob, /RELEASE_TAG: \$\{\{ inputs\.release_tag \}\}/);
-  assert.match(resolveJob, /node scripts\/check-release-tag\.mjs "\$RELEASE_TAG"/);
-  assert.match(
-    resolveJob,
-    /repos\/\$GITHUB_REPOSITORY\/releases\/tags\/\$RELEASE_TAG/,
-  );
-  assert.match(resolveJob, /refs\/tags\/\$RELEASE_TAG\^\{commit\}/);
-  assert.match(
-    resolveJob,
-    /git merge-base --is-ancestor "\$template_sha" "origin\/\$DEFAULT_BRANCH"/,
-  );
-  assert.match(resolveJob, /echo "sha=\$template_sha" >> "\$GITHUB_OUTPUT"/);
-  assert.match(resolveJob, /ref: \$\{\{ steps\.source\.outputs\.sha \}\}/);
-  assert.match(
-    resolveJob,
-    /sparse-checkout: \|\n\s+crates\/tidebreak-sandbox-agent\/e2b/,
-  );
-  assert.match(publishJob, /ref: \$\{\{ github\.sha \}\}/);
-  assert.match(
-    publishJob,
-    /ref: \$\{\{ needs\.resolve\.outputs\.source_sha \}\}/,
-  );
-  assert.match(
-    publishJob,
-    /working-directory: \$\{\{ env\.SOURCE_TEMPLATE_DIR \}\}/,
-  );
-
-  // Source validation and all dependency setup happen before any secret-bearing
-  // step. Credentials remain step-scoped to the API calls that require them.
-  assert.ok(
-    resolveJob.indexOf("Validate the publication source") <
-      resolveJob.indexOf("Require the E2B credential"),
-  );
-  assert.ok(
-    resolveJob.indexOf("Check out the validated template source") <
-      resolveJob.indexOf("Require the E2B credential"),
-  );
-  const sourceValidationStep = resolveJob.match(
-    /- name: Validate the publication source[\s\S]*?(?=\n\s+- name:)/,
-  )?.[0];
-  const sourceCheckoutStep = resolveJob.match(
-    /- name: Check out the validated template source[\s\S]*?(?=\n\s+- name:)/,
-  )?.[0];
-  assert.ok(sourceValidationStep);
-  assert.ok(sourceCheckoutStep);
-  assert.doesNotMatch(sourceValidationStep, /secrets\./);
-  assert.doesNotMatch(sourceCheckoutStep, /secrets\./);
-  assert.doesNotMatch(
-    publishJob.match(/^    env:\n[\s\S]*?(?=^    steps:)/m)?.[0] ?? "",
-    /secrets\./,
-  );
-  assert.ok(
-    publishJob.indexOf("Install the locked E2B CLI") <
-      publishJob.indexOf("secrets."),
-  );
-  assert.match(
-    publishJob,
-    /pnpm --dir \.github\/e2b-cli install --frozen-lockfile --ignore-scripts/,
-  );
-  assert.match(
-    publishJob,
-    /\.github\/e2b-cli\/node_modules\/\.bin\/e2b --version/,
-  );
-  assert.doesNotMatch(publishJob, /npm install|@latest/);
-
-  // The mobile deploy is the one secret consumer reachable from a pull
-  // request, and deliberately so: the routing dry-run that comments on a
-  // mobile PR must ask EAS for the last finished build's runtimeVersion,
-  // which needs auth. Three properties keep that narrow, and each is
-  // asserted here rather than left to review. The trigger is `pull_request`,
-  // never `pull_request_target`, so a fork's run is handed an empty token
-  // instead of the real one. The credential is scoped to Expo alone — it
-  // must not reach the signing secrets. And every step that actually ships
-  // (OTA publish, binary build + store submission) is guarded off for
-  // pull_request events, so a PR run can only ever read.
-  const mobile = workflows["build-mobile.yml"];
-  if (mobile) {
-    assert.doesNotMatch(mobile, /^\s*pull_request_target:/m);
-    assert.deepEqual(
-      [...new Set(mobile.match(/secrets\.[A-Z0-9_]+/g))],
-      ["secrets.EXPO_TOKEN"],
+    // Each helper version is a prerelease on this repository, built from
+    // main, so it never becomes the latest release the updater reads.
+    assert.match(
+      workflowJob(whisper, "version"),
+      /if: \$\{\{ github\.ref == 'refs\/heads\/main' \}\}/,
+    );
+    assert.match(whisperPublish, /permissions:\n      contents: write\n/);
+    assert.match(
+      whisperPublish,
+      /HELPER_TAG: whisper-helper-v\$\{\{ needs\.version\.outputs\.version \}\}/,
     );
     assert.match(
-      mobile,
-      /^permissions:\n  contents: read\n  pull-requests: write$/m,
+      whisperPublish,
+      /gh release create "\$HELPER_TAG" dist\/\* \\\n[\s\S]*?--prerelease\n/,
     );
-    for (const name of ["Publish OTA", "Build binary and auto-submit"]) {
-      const step = mobile.match(
-        new RegExp(`- name: ${name}\\n[\\s\\S]*?(?=\\n\\s+- name:|$)`),
-      )?.[0];
-      assert.ok(step, `missing deploy step: ${name}`);
-      assert.match(
-        step,
-        /github\.event_name != 'pull_request'/,
-        `${name} must never run from a pull request`,
-      );
-    }
+    assert.doesNotMatch(whisperPublish, /--latest\b/);
+    // The desktop trusts only the updater key, so a helper signed with any
+    // other key must stop here rather than publish.
+    assert.match(
+      whisperPublish,
+      /node scripts\/verify-updater-signatures\.mjs\n\s+--config crates\/tidebreak-desktop\/tauri\.conf\.json\n\s+dist\n/,
+    );
+    const helperVerifyAt = whisperPublish.indexOf("node scripts/verify-updater-signatures.mjs");
+    assert.ok(
+      whisperPublish.indexOf("tauri signer sign") < helperVerifyAt &&
+        helperVerifyAt < whisperPublish.indexOf('gh release create "$HELPER_TAG"'),
+      "helper signatures must verify after signing and before publication",
+    );
+  }
+
+  // The mobile deploy needs a paid Expo account, so it runs only when someone
+  // dispatches it, never from a pull request or a push, and it skips cleanly
+  // when the repository has no Expo token.
+  const mobile = workflows["build-mobile.yml"];
+  assert.ok(mobile, "build-mobile.yml must stay available for manual builds");
+  assert.match(mobile, /^on:\n  workflow_dispatch:\n/m);
+  assert.doesNotMatch(
+    mobile,
+    /^ {2}(?:pull_request(?:_target)?|push|schedule):/m,
+    "the mobile deploy must run only on workflow_dispatch",
+  );
+  assert.deepEqual(
+    [...new Set(mobile.match(/secrets\.[A-Z0-9_]+/g))],
+    ["secrets.EXPO_TOKEN"],
+  );
+  assert.match(mobile, /^permissions:\n  contents: read$/m);
+  const expoGate = workflowJob(mobile, "expo");
+  assert.match(expoGate, /echo "available=false" >> "\$GITHUB_OUTPUT"/);
+  assert.doesNotMatch(expoGate, /exit 1/, "a missing token must skip, not fail");
+  const mobileDeploy = workflowJob(mobile, "deploy");
+  assert.match(mobileDeploy, /needs: expo\n/);
+  assert.match(
+    mobileDeploy,
+    /if: \$\{\{ needs\.expo\.outputs\.available == 'true' \}\}/,
+  );
+  for (const name of ["Publish OTA", "Build binary and auto-submit"]) {
+    const step = mobile.match(
+      new RegExp(`- name: ${name}\\n[\\s\\S]*?(?=\\n\\s+- name:|$)`),
+    )?.[0];
+    assert.ok(step, `missing deploy step: ${name}`);
+    assert.match(step, /!inputs\.dry_run/, `${name} must honour a dry run`);
   }
 });
 
@@ -1178,6 +1033,18 @@ test("desktop voice delegates whisper.cpp to the verified helper", () => {
   assert.match(
     desktopWhisperInstall,
     /sha256_hex_of_file\(&binary\).*marker\.binary_sha256/s,
+  );
+  // The desktop downloads the helper from the release the publish workflow
+  // creates, and trusts the key that signs app updates.
+  assert.match(
+    desktopWhisperInstall,
+    /"https:\/\/github\.com\/naingthet\/tidebreak\/releases\/download\/whisper-helper-v\{HELPER_VERSION\}\/tidebreak-whisper-\{triple\}\{extension\}"/,
+  );
+  assert.ok(
+    desktopWhisperInstall.includes(
+      `const HELPER_PUBKEY: &str = "${tauriConfig.plugins.updater.pubkey}";`,
+    ),
+    "the helper must trust the updater's public key",
   );
 
   const releaseWindows = workflowJob(workflows["release.yml"], "build_windows");
@@ -1238,17 +1105,6 @@ test(
     );
   },
 );
-
-test("E2B template pin provenance and writes share the validated source revision", () => {
-  const pin = workflowJob(workflows["publish-e2b-template.yml"], "pin");
-
-  assert.match(pin, /SOURCE_SHA: \$\{\{ needs\.resolve\.outputs\.source_sha \}\}/);
-  assert.match(pin, /name: Check out the validated template provenance/);
-  assert.match(pin, /ref: \$\{\{ needs\.resolve\.outputs\.source_sha \}\}/);
-  assert.match(pin, /path: \.release-source/);
-  assert.match(pin, /git diff --quiet --no-index "\.release-source\/\$TEMPLATE_PATH" "\$TEMPLATE_PATH"/);
-  assert.match(pin, /directory = f"\.release-source\/\{os\.environ\['TEMPLATE_PATH'\]\}"/);
-});
 
 test("the self-host Docker context is allowlisted and denies hidden credentials", () => {
   assert.match(dockerIgnore, /^\*\*$/m);
@@ -1743,126 +1599,62 @@ test("release builds freeze a draft tag from the trusted main workflow", () => {
   assert.match(release, /ref: \$\{\{ needs\.validate\.outputs\.sha \}\}/);
 });
 
-test("release documentation is built from the validated tag and promoted only after staged checks", () => {
-  const build = workflowJob(workflows["release.yml"], "build_docs");
-  const publish = workflowJob(workflows["release.yml"], "publish_docs");
+test("documentation publishes to GitHub Pages from main", () => {
+  const docs = workflows["docs.yml"];
+  assert.ok(docs, "docs.yml must publish the documentation");
+  assert.match(
+    docs,
+    /^on:\n  push:\n    branches: \[main\]\n    paths:\n      - "docs-site\/\*\*"\n      - "\.github\/workflows\/docs\.yml"\n  workflow_dispatch:\n/m,
+  );
+  assert.doesNotMatch(docs, /^\s*pull_request(?:_target)?:/m);
+  assert.match(docs, /^permissions:\n  contents: read$/m);
+  assert.match(docs, /cancel-in-progress: false/);
+  assert.doesNotMatch(docs, /secrets\./);
 
-  assert.match(build, /^    needs: validate$/m);
-  assert.doesNotMatch(build, /^    environment:/m);
-  assert.match(publish, /^    needs: \[validate, build_docs, finalize_release\]$/m);
-  assert.match(
-    publish,
-    /if: >-\n      \$\{\{\n        !cancelled\(\)\n        && needs\.validate\.result == 'success'\n        && needs\.build_docs\.result == 'success'\n        && needs\.finalize_release\.result == 'success'\n      \}\}/,
-    "docs publication must tolerate skipped platform ancestors while requiring its direct prerequisites",
-  );
-  assert.match(publish, /^    environment:\n      name: docs-production$/m);
-  assert.match(build, /^    permissions:\n      contents: read$/m);
-  assert.match(publish, /^    permissions:\n      contents: read$/m);
-  assert.doesNotMatch(`${build}\n${publish}`, /id-token: write|contents: write/);
-  assert.match(build, /BASE_PATH: \/docs/);
-  assert.match(build, /RELEASE_SHA: \$\{\{ needs\.validate\.outputs\.sha \}\}/);
-  assert.doesNotMatch(build, /VERCEL_TOKEN|docs-production/);
-  assert.match(publish, /VERCEL_TOKEN: \$\{\{ secrets\.VERCEL_TOKEN \}\}/);
-  assert.equal(
-    Object.hasOwn(docsPackage.dependencies ?? {}, "vercel"),
-    false,
-  );
-  if (Object.hasOwn(docsPackage.devDependencies ?? {}, "vercel")) {
-    assert.match(docsPackage.devDependencies.vercel, /^\d+\.\d+\.\d+$/);
-  }
-  assert.match(build, /pnpm --dir docs-site install --frozen-lockfile/);
-  assert.match(build, /ref: \$\{\{ needs\.validate\.outputs\.sha \}\}/);
+  const build = workflowJob(docs, "build");
+  const deploy = workflowJob(docs, "deploy");
+  assert.match(build, /if: \$\{\{ github\.ref == 'refs\/heads\/main' \}\}/);
+  assert.match(build, /permissions:\n      contents: read\n/);
+  assert.doesNotMatch(build, /id-token|pages: write/);
+  // Pages serves the repository under /tidebreak/, and the docs one level down.
+  assert.match(build, /BASE_PATH: \/tidebreak\/docs\n/);
   assert.match(build, /persist-credentials: false/);
-  assert.match(build, /test "\$\(git rev-parse HEAD\)" = "\$RELEASE_SHA"/);
-  assert.match(build, /pnpm --dir docs-site build/);
-  assert.match(build, /pnpm --dir docs-site test:vercel-output/);
-  assert.match(build, /pnpm --dir docs-site package:vercel/);
-  assert.match(build, /\.vercel\/output\/static\/docs\/index\.html/);
-  assert.match(build, /cd \.vercel\/output/);
-  assert.match(build, /find \. -type f -print0/);
-  assert.match(build, /tidebreak-docs-\$RELEASE_TAG\.sha256/);
-  assert.match(build, /name: tidebreak-docs-\$\{\{ needs\.validate\.outputs\.tag \}\}-prebuilt/);
-  assert.doesNotMatch(publish, /docs-site install|docs-site build/);
-  assert.equal(vercelCliPackage.dependencies.vercel, "59.0.0");
-  assert.match(publish, /sparse-checkout: \.github\/vercel-cli/);
-  assert.match(publish, /persist-credentials: false/);
-  assert.match(publish, /corepack install --global pnpm@10\.18\.3/);
-  assert.doesNotMatch(publish, /uses: pnpm\/action-setup/);
-  assert.match(
-    publish,
-    /pnpm --dir \.github\/vercel-cli install --frozen-lockfile --ignore-scripts/,
-  );
-  assert.doesNotMatch(publish, /pnpm (?:add --global|dlx)|npx/);
-  assert.match(publish, /actions\/download-artifact@[0-9a-f]{40} # v8/);
-  assert.match(publish, /name: tidebreak-docs-\$\{\{ needs\.validate\.outputs\.tag \}\}-manifest/);
-  assert.match(publish, /sha256sum --check --strict/);
-  assert.match(publish, /asset_path=.*\/docs\/_next\//);
-  for (const directive of [
-    "default-src 'self'",
-    "object-src 'none'",
-    "frame-ancestors 'none'",
-  ]) {
-    assert.equal(
-      publish.split(`content-security-policy:.*${directive}`).length - 1,
-      2,
-      `staged and promoted docs must both verify ${directive}`,
+  assert.match(build, /pnpm --dir docs-site install --frozen-lockfile/);
+  for (const command of ["build", "lint", "types:check"]) {
+    assert.ok(
+      build.includes(`pnpm --dir docs-site ${command}\n`),
+      `the docs build must run ${command}`,
     );
   }
-  assert.match(publish, /x-frame-options: DENY/);
-  assert.match(publish, /\.id == \$id and \.readyState == "READY"/);
-  assert.match(publish, /--prebuilt/);
-  assert.match(publish, /--prod/);
-  assert.match(publish, /--skip-domain/);
-  assert.match(publish, /--meta "releaseTag=\$RELEASE_TAG"/);
-  assert.match(publish, /--meta "releaseSha=\$RELEASE_SHA"/);
-  assert.match(publish, /jq -ce '\.deployment \/\/ \.'/);
-  assert.match(publish, /deployment_url=.*jq -er \.url/);
-  assert.match(publish, /deployment_id=.*jq -er \.id/);
-  assert.doesNotMatch(publish, /(?:^|\s)--scope(?:\s|$)/m);
-  assert.doesNotMatch(publish, /VERCEL_SCOPE/);
-  assert.match(publish, /url\.searchParams\.set\("teamId", teamId\)/);
+  assert.match(build, /grep -Fq '\/tidebreak\/docs\/_next\/' docs-site\/out\/index\.html/);
   assert.match(
-    publish,
-    /\/v10\/projects\/" \+ projectId \+ "\/promote\/" \+ deploymentId/,
+    build,
+    /grep -Fq 'https:\/\/naingthet\.github\.io\/tidebreak\/docs\/' docs-site\/out\/index\.html/,
   );
-  assert.match(publish, /\/v13\/deployments\/tidebreak-docs\.vercel\.app/);
+  assert.match(build, /cp -R docs-site\/out\/\. _site\/docs\//);
   assert.match(
-    publish,
-    /JSON\.stringify\(\{\s*id: deployment\.id,\s*readyState: deployment\.readyState,\s*\}\)/,
+    build,
+    /uses: actions\/upload-pages-artifact@[0-9a-f]{40} # v5\.0\.0\n\s+with:\n\s+path: _site\n/,
   );
-  assert.match(publish, /Vercel promote failed: " \+ response\.status/);
-  assert.doesNotMatch(publish, /\+ await response\.text\(\)/);
-  assert.doesNotMatch(publish, /--token/);
-  assert.match(publish, /\/docs\/quickstart\//);
-  assert.match(publish, /\/docs\/search-index\.json/);
-  assert.match(publish, /\/docs\/sitemap\.xml/);
-  assert.match(publish, /\.github\/vercel-cli\/node_modules\/\.bin\/vercel curl/);
-  assert.match(publish, /\.github\/vercel-cli\/node_modules\/\.bin\/vercel promote/);
-  assert.doesNotMatch(publish, /vercel inspect/);
+  assert.match(deploy, /needs: build\n/);
+  assert.match(deploy, /permissions:\n      id-token: write\n      pages: write\n/);
+  assert.match(deploy, /environment:\n      name: github-pages\n/);
+  assert.match(deploy, /uses: actions\/deploy-pages@[0-9a-f]{40} # v5\.0\.1/);
+  assert.doesNotMatch(deploy, /actions\/checkout/);
 
-  const deploy = publish.indexOf("Create an unaliased production deployment");
-  const verify = publish.indexOf("Verify the transferred documentation");
-  const smoke = publish.indexOf("Smoke-test the staged deployment");
-  const promote = publish.indexOf("Promote the verified deployment");
-  const production = publish.indexOf("Verify the production alias");
-  assert.ok(
-    verify !== -1 &&
-      verify < deploy &&
-      deploy < smoke &&
-      smoke < promote &&
-      promote < production,
-    "docs must be verified, staged, checked, promoted, and then verified in that order",
+  // The site is a static export that honours BASE_PATH, and the release no
+  // longer builds or deploys it.
+  const nextConfig = readFileSync(
+    repositoryFile("docs-site", "next.config.mjs"),
+    "utf8",
   );
-
-  const packageOutput = build.indexOf("pnpm --dir docs-site package:vercel");
-  const digestOutput = build.indexOf("find . -type f -print0");
-  assert.ok(
-    packageOutput !== -1 && packageOutput < digestOutput,
-    "the digest must cover the packaged Vercel output, including config.json",
-  );
+  assert.match(nextConfig, /output: 'export'/);
+  assert.match(nextConfig, /basePath: process\.env\.BASE_PATH/);
+  assert.equal(Object.hasOwn(docsPackage.scripts ?? {}, "package:vercel"), false);
+  assert.equal(workflows["release.yml"].includes("docs-site"), false);
 });
 
-test("release compilation uses S3 without cache warmer workflows", () => {
+test("release compilation uses no cache warmer workflows", () => {
   for (const name of ["cache-macos.yml", "cache-windows.yml", "cache-linux.yml"]) {
     assert.equal(workflows[name], undefined);
   }
@@ -1889,12 +1681,12 @@ test("release compilation uses S3 without cache warmer workflows", () => {
   for (const job of [prepareWindowsSidecars, prepareWindowsDesktop, buildWindows]) {
     assert.match(
       job,
-      /target: x86_64-pc-windows-msvc\n\s+runner: \$\{\{ vars\.RELEASE_WINDOWS_X64_RUNNER \|\| 'windows-latest' \}\}/,
+      /target: x86_64-pc-windows-msvc\n\s+runner: windows-latest\n/,
     );
   }
   assert.match(
     buildWindows,
-    /needs: \[validate, inspect_hosted, notices, prepare_windows, prepare_windows_desktop\]/,
+    /needs: \[validate, notices, prepare_windows, prepare_windows_desktop\]/,
   );
   assert.match(prepareWindowsSidecars, /prepare-sidecar\.mjs --release/);
   assert.match(
@@ -2219,31 +2011,6 @@ test("macOS notarization happens after bundling and before artifact verification
       assert.ok(keyIdx <= notarizeIdx, "the notary key must load before notarization");
     }
   }
-  // Same invariant for staging.
-  const staging = workflows["staging-publish.yml"];
-  if (staging) {
-    const stagingNames = stepNames(staging);
-    const sBundle = stagingNames.findIndex((n) => /bundle.*sign|build.*sign/i.test(n));
-    const sKey = stagingNames.findIndex((n) => /Prepare App Store Connect key/i.test(n));
-    const sNotarize = stagingNames.findIndex((n) => /notar/i.test(n) && /dmg|staple/i.test(n));
-    if (sBundle !== -1 && sKey !== -1 && sNotarize !== -1) {
-      const sSingle = /dmg.*app|app.*dmg/i.test(stagingNames[sNotarize]);
-      if (sSingle) {
-        assert.ok(sBundle < sKey, "staging: the notary key must load after bundling");
-        assert.ok(sKey <= sNotarize, "staging: the notary key must load before notarization");
-      }
-    }
-    const stagingNotarytoolIdx = staging.indexOf("notarytool submit");
-    const stagingStepStart = staging.lastIndexOf("- name:", stagingNotarytoolIdx);
-    const stagingStepEnd = staging.indexOf("\n      - name:", stagingNotarytoolIdx);
-    const stagingNotarizeStep = staging.slice(
-      stagingStepStart,
-      stagingStepEnd !== -1 ? stagingStepEnd : undefined,
-    );
-    assert.match(stagingNotarizeStep, /notarytool wait/);
-    assert.match(stagingNotarizeStep, /for attempt in 1 2 3/);
-    assert.match(stagingNotarizeStep, /Notary status check failed; retrying/);
-  }
 });
 
 test("Linux packaging writes no shared cache before loading updater material", () => {
@@ -2252,7 +2019,7 @@ test("Linux packaging writes no shared cache before loading updater material", (
   const buildJob = workflowJob(release, "build_linux");
   // A credential-free third-party notices gate may sit in front of the
   // packaging build; nothing else may.
-  assert.match(buildJob, /needs: \[validate, inspect_hosted(?:, notices)?\]/);
+  assert.match(buildJob, /needs: \[validate(?:, notices)?\]/);
   assert.match(buildJob, /ubuntu-22\.04/);
   assert.match(buildJob, /runs-on: \$\{\{ matrix\.runner \}\}/);
   assert.match(buildJob, /target: x86_64-unknown-linux-gnu/);
@@ -2281,59 +2048,68 @@ test("Linux packaging writes no shared cache before loading updater material", (
   assert.match(buildJob, /tauri signer sign/);
 });
 
-test("an existing immutable release resumes without rebuilding or overwriting", () => {
+test("a published release is verified again, never rebuilt or overwritten", () => {
   const release = workflows["release.yml"];
-  const inspectJob = workflowJob(release, "inspect_hosted");
-  const prepareJob = workflowJob(release, "prepare_macos");
-  const combineJob = workflowJob(release, "combine_macos");
-  const signedBuildJob = workflowJob(release, "build_macos");
-  const publishJob = workflowJob(release, "publish");
+  for (const name of ["inspect_hosted", "publish", "build_docs", "publish_docs"]) {
+    assert.doesNotMatch(
+      release,
+      new RegExp(`^  ${name}:\\n`, "m"),
+      `${name} must stay removed`,
+    );
+  }
+  for (const jobName of [
+    "prepare_macos",
+    "combine_macos",
+    "build_macos",
+    "prepare_windows",
+    "prepare_windows_desktop",
+    "build_windows",
+    "build_linux",
+    "source_sbom",
+  ]) {
+    assert.match(
+      workflowJob(release, jobName),
+      /needs\.validate\.outputs\.draft == 'true'/,
+      `${jobName} must build only a draft`,
+    );
+  }
 
-  assert.match(inspectJob, /id-token: write/);
-  assert.match(inspectJob, /ref: \$\{\{ github\.sha \}\}/);
-  assert.match(inspectJob, /prepare-published-release\.mjs/);
-  assert.match(inspectJob, /Validated the complete immutable release/);
-  assert.match(prepareJob, /needs\.inspect_hosted\.outputs\.exists != 'true'/);
-  assert.match(combineJob, /needs\.inspect_hosted\.outputs\.exists != 'true'/);
-  assert.match(
-    signedBuildJob,
-    /needs\.inspect_hosted\.outputs\.exists != 'true'/,
-  );
-  assert.match(
-    workflowJob(release, "prepare_windows"),
-    /needs\.inspect_hosted\.outputs\.exists != 'true'/,
-  );
-  assert.match(
-    workflowJob(release, "prepare_windows_desktop"),
-    /needs\.inspect_hosted\.outputs\.exists != 'true'/,
-  );
-  assert.match(
-    workflowJob(release, "build_windows"),
-    /needs\.inspect_hosted\.outputs\.exists != 'true'/,
-  );
-  assert.match(
-    publishJob,
-    /needs\.inspect_hosted\.outputs\.exists == 'true'/,
-  );
-  assert.match(publishJob, /Resume from the hosted immutable release/);
-  assert.match(publishJob, /ref: \$\{\{ github\.sha \}\}/);
-
-  const immutableUpload = publishJob.match(
-    /- name: Upload immutable release files[\s\S]*?(?=\n\s+- name:)/,
+  const attachJob = workflowJob(release, "attach_downloads");
+  const download = attachJob.match(
+    /- name: Download existing immutable GitHub assets[\s\S]*?(?=\n\s+- name:)/,
   )?.[0];
-  assert.ok(immutableUpload);
-  assert.match(
-    immutableUpload,
-    /if: \$\{\{ needs\.inspect_hosted\.outputs\.exists != 'true' \}\}/,
-  );
+  assert.ok(download, "a published release must be downloaded and verified");
+  assert.match(download, /if: \$\{\{ needs\.validate\.outputs\.draft != 'true' \}\}/);
+  assert.match(download, /gh release download "\$RELEASE_TAG"/);
+  for (const step of [
+    "Prevent latest-version regression",
+    "Create release manifests and checksums",
+    "Prepare downloads from the verified build",
+    "Prepare provenance attestation subjects",
+  ]) {
+    const body = attachJob.match(
+      new RegExp(`- name: ${step}\\n[\\s\\S]*?(?=\\n\\s+- name:)`),
+    )?.[0];
+    assert.ok(body, `attach_downloads must ${step.toLowerCase()}`);
+    assert.match(
+      body,
+      /if: \$\{\{ needs\.validate\.outputs\.draft == 'true' \}\}/,
+      `${step} must touch only a draft`,
+    );
+  }
+  const upload = attachJob.match(
+    /- name: Attach or verify the GitHub Release downloads[\s\S]*$/,
+  )?.[0];
+  assert.ok(upload);
+  assert.match(upload, /if \[\[ "\$RELEASE_DRAFT" = true \]\]; then[\s\S]*gh release upload/);
 });
 
 test("source SBOM generation is isolated from production credentials", () => {
   const release = workflows["release.yml"];
   const sbomJob = workflowJob(release, "source_sbom");
-  const publishJob = workflowJob(workflows["release.yml"], "publish");
+  const attachJob = workflowJob(release, "attach_downloads");
 
-  assert.match(sbomJob, /needs: \[validate, inspect_hosted\]/);
+  assert.match(sbomJob, /needs: validate\n/);
   assert.match(sbomJob, /permissions:\n      contents: read/);
   assert.doesNotMatch(sbomJob, /id-token:/);
   assert.doesNotMatch(sbomJob, /attestations:/);
@@ -2357,50 +2133,94 @@ test("source SBOM generation is isolated from production credentials", () => {
     /uses: actions\/upload-artifact@[0-9a-f]{40} # v7/,
   );
   assert.match(sbomJob, /name: tidebreak-source-sbom-\$\{\{ needs\.validate\.outputs\.version \}\}/);
-  assert.doesNotMatch(publishJob, /anchore\/sbom-action/);
+  assert.doesNotMatch(attachJob, /anchore\/sbom-action/);
 
-  assert.match(publishJob, /needs: \[validate, inspect_hosted, build_macos, build_windows, build_linux, source_sbom, finalize_release\]/);
-  assert.match(publishJob, /needs\.source_sbom\.result == 'success'/);
+  assert.match(attachJob, /needs: \[validate, build_macos, build_windows, build_linux, source_sbom\]/);
+  assert.match(attachJob, /needs\.source_sbom\.result == 'success'/);
   assert.match(
-    publishJob,
+    attachJob,
     /uses: actions\/download-artifact@[0-9a-f]{40} # v8/,
   );
-  assert.match(publishJob, /name: tidebreak-source-sbom-\$\{\{ needs\.validate\.outputs\.version \}\}/);
-  assert.match(publishJob, /sha256sum --check --strict/);
+  assert.match(attachJob, /name: tidebreak-source-sbom-\$\{\{ needs\.validate\.outputs\.version \}\}/);
+  assert.match(attachJob, /sha256sum --check --strict "\$sbom\.sha256"/);
 });
 
 test("public releases attest provenance without treating the source SBOM as an installer SBOM", () => {
-  const publishJob = workflowJob(workflows["release.yml"], "publish");
+  const attachJob = workflowJob(workflows["release.yml"], "attach_downloads");
 
-  assert.match(publishJob, /attestations: write/);
-  assert.match(publishJob, /id-token: write/);
-  assert.match(publishJob, /github\.event\.repository\.visibility == 'public'/);
+  assert.match(attachJob, /attestations: write/);
+  assert.match(attachJob, /id-token: write/);
+  assert.match(attachJob, /github\.event\.repository\.visibility == 'public'/);
 
-  const attestations = publishJob.match(
+  const attestations = attachJob.match(
     /uses: actions\/attest@[0-9a-f]{40} # v4\.2\.2/g,
   );
   assert.equal(attestations?.length, 1);
-  assert.match(publishJob, /subject-checksums: \$\{\{ runner\.temp \}\}\/immutable-release-files\.sha256/);
-  assert.doesNotMatch(publishJob, /sbom-path:/);
-  assert.doesNotMatch(publishJob, /release-artifacts\.sha256/);
+  assert.match(attachJob, /subject-checksums: \$\{\{ runner\.temp \}\}\/immutable-release-files\.sha256/);
+  assert.match(
+    attachJob,
+    /\(cd dist && find \. -type f -print0 \| sort -z \| xargs -0 sha256sum\)/,
+  );
+  assert.doesNotMatch(attachJob, /sbom-path:/);
+  assert.doesNotMatch(attachJob, /release-artifacts\.sha256/);
 
-  const provenanceIndex = publishJob.indexOf("- name: Attest immutable release provenance");
-  const awsIndex = publishJob.indexOf("- name: Configure AWS credentials");
-  assert.ok(provenanceIndex !== -1 && awsIndex !== -1);
-  assert.ok(provenanceIndex < awsIndex);
+  // The attestation covers the exact bytes before any of them are attached.
+  const provenanceIndex = attachJob.indexOf("- name: Attest immutable release provenance");
+  const uploadIndex = attachJob.indexOf("- name: Attach or verify the GitHub Release downloads");
+  assert.ok(provenanceIndex !== -1 && uploadIndex !== -1);
+  assert.ok(provenanceIndex < uploadIndex);
 });
 
 test("GitHub release assets are attached before immutable publication", () => {
   const release = workflows["release.yml"];
   const attachJob = workflowJob(release, "attach_downloads");
   const finalizeJob = workflowJob(release, "finalize_release");
-  const publishJob = workflowJob(release, "publish");
 
-  assert.match(attachJob, /needs: \[validate, inspect_hosted, build_macos, build_windows, build_linux, source_sbom\]/);
+  assert.match(attachJob, /needs: \[validate, build_macos, build_windows, build_linux, source_sbom\]/);
   assert.match(attachJob, /contents: write/);
   assert.doesNotMatch(attachJob, /^    environment:/m);
   assert.doesNotMatch(attachJob, /secrets\./);
   assert.doesNotMatch(attachJob, /APPLE_|TAURI_SIGNING|AWS_|DOWNLOADS_S3/);
+
+  // GitHub Releases is the only download host: the manifests and the updater
+  // feed are generated from the verified builds and point at the tag's own
+  // release downloads.
+  assert.match(
+    attachJob,
+    /RELEASE_BASE_URL: https:\/\/github\.com\/\$\{\{ github\.repository \}\}\/releases\/download\n/,
+  );
+  assert.match(attachJob, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(
+    attachJob,
+    /node scripts\/create-release-manifests\.mjs[\s\S]*?--base-url "\$RELEASE_BASE_URL"/,
+  );
+  assert.match(attachJob, /for name in manifest\.json latest\.json; do/);
+  assert.match(attachJob, /node scripts\/prepare-published-release\.mjs/);
+  assert.match(
+    attachJob,
+    /cmp "\$RUNNER_TEMP\/expected-latest\.json" downloads\/latest\.json/,
+  );
+  assert.match(attachJob, /The release manifest names a file the release does not carry/);
+  const createAt = attachJob.indexOf("- name: Create release manifests and checksums");
+  const prepareAt = attachJob.indexOf("- name: Prepare downloads from the verified build");
+  const verifyAt = attachJob.indexOf("- name: Verify the complete GitHub asset set");
+  const uploadAt = attachJob.indexOf("- name: Attach or verify the GitHub Release downloads");
+  assert.ok(
+    createAt !== -1 && createAt < prepareAt && prepareAt < verifyAt && verifyAt < uploadAt,
+    "manifests are created, gathered, and verified before any upload",
+  );
+  // Every updater signature must verify against the public key installed
+  // apps trust before anything is attached; a release signed with another
+  // key would publish updates that every installed app rejects.
+  assert.match(
+    attachJob,
+    /node scripts\/verify-updater-signatures\.mjs \\\n\s+--config crates\/tidebreak-desktop\/tauri\.conf\.json \\\n\s+downloads\n/,
+  );
+  const signaturesAt = attachJob.indexOf("node scripts/verify-updater-signatures.mjs");
+  assert.ok(
+    verifyAt < signaturesAt && signaturesAt < uploadAt,
+    "updater signatures must verify before any upload",
+  );
 
   assert.match(attachJob, /name: tidebreak-macos-universal-/);
   assert.match(attachJob, /name: tidebreak-windows-x86_64-/);
@@ -2412,37 +2232,21 @@ test("GitHub release assets are attached before immutable publication", () => {
   assert.match(attachJob, /sha256sum --check --strict/);
   assert.match(attachJob, /Tidebreak-macos-universal\.dmg/);
   assert.match(attachJob, /Tidebreak-macos-apple-silicon\.dmg/);
-  assert.match(attachJob, /Tidebreak-windows-x86_64-setup\.exe/);
-  assert.match(attachJob, /Tidebreak-windows-aarch64-setup\.exe/);
-  assert.match(attachJob, /Tidebreak-linux-x86_64\.AppImage/);
-  assert.match(attachJob, /Tidebreak-linux-x86_64\.deb/);
-  assert.match(attachJob, /Tidebreak-linux-aarch64\.AppImage/);
-  assert.match(attachJob, /Tidebreak-linux-aarch64\.deb/);
-  assert.match(attachJob, /\.app\.zip/);
-  assert.match(attachJob, /\.app\.tar\.gz/);
-  assert.match(attachJob, /\.app\.tar\.gz\.sig/);
-  assert.match(
-    attachJob,
-    /Tidebreak_\$\{TIDEBREAK_VERSION\}_(?:x86_64|\$\{arch\})\.deb\.sig/,
-  );
-  if (/name: tidebreak-windows-aarch64-/.test(attachJob)) {
-    assert.match(attachJob, /name: tidebreak-linux-aarch64-/);
-    assert.match(attachJob, /Tidebreak-windows-aarch64-setup\.exe/);
-    assert.match(attachJob, /Tidebreak-linux-aarch64\.AppImage/);
-    assert.match(attachJob, /Tidebreak-linux-aarch64\.deb/);
-    assert.match(
-      attachJob,
-      /Tidebreak_\$\{TIDEBREAK_VERSION\}_(?:aarch64|\$\{arch\})\.deb\.sig/,
+  assert.match(attachJob, /for suffix in dmg app\.zip app\.tar\.gz app\.tar\.gz\.sig; do/);
+  assert.match(attachJob, /versioned="Tidebreak_\$\{TIDEBREAK_VERSION\}_\$\{arch\}"/);
+  for (const suffix of [
+    "-setup.exe",
+    "-setup.exe.sig",
+    ".AppImage",
+    ".AppImage.sig",
+    ".deb",
+    ".deb.sig",
+  ]) {
+    assert.ok(
+      attachJob.includes(`"$versioned${suffix}"`),
+      `attach_downloads must require the versioned ${suffix} package`,
     );
   }
-  assert.match(
-    attachJob,
-    /Tidebreak_\$\{TIDEBREAK_VERSION\}_x86_64\.deb\.sig/,
-  );
-  assert.match(
-    attachJob,
-    /Tidebreak_\$\{TIDEBREAK_VERSION\}_aarch64\.deb\.sig/,
-  );
   assert.match(attachJob, /gh release upload "\$RELEASE_TAG"/);
   assert.match(attachJob, /if \[\[ "\$RELEASE_DRAFT" = true \]\]/);
   assert.match(attachJob, /releases\/\$RELEASE_ID\/assets/);
@@ -2450,42 +2254,37 @@ test("GitHub release assets are attached before immutable publication", () => {
   assert.match(attachJob, /actual-release-assets/);
   assert.match(attachJob, /diff -u/);
 
-  assert.match(finalizeJob, /needs: \[validate, attach_downloads\]/);
+  assert.match(finalizeJob, /needs: \[validate, build_macos, attach_downloads\]/);
   assert.match(finalizeJob, /contents: write/);
   assert.match(finalizeJob, /commits\/\$RELEASE_TAG/);
   assert.match(finalizeJob, /Release tag \$RELEASE_TAG moved after validation/);
   assert.match(finalizeJob, /draft: false/);
   assert.match(finalizeJob, /make_latest: "true"/);
   assert.match(finalizeJob, /published_at=\$published_at/);
-  assert.match(publishJob, /needs\.finalize_release\.result == 'success'/);
-  assert.match(
-    publishJob,
-    /RELEASE_PUBLISHED_AT: \$\{\{ needs\.finalize_release\.outputs\.published_at \}\}/,
-  );
-  assert.match(publishJob, /Recover build inputs from the immutable GitHub Release/);
-  assert.match(publishJob, /recovery\/Tidebreak-macos-universal\.dmg/);
 
-  const macDownloadLink = readFileSync(repositoryFile("README.md"), "utf8")
-    .match(
-      /releases\/latest\/download\/(Tidebreak-macos-[\w-]+\.dmg)/,
-    )?.[1];
+  const readme = readFileSync(repositoryFile("README.md"), "utf8");
+  const macDownloadLink = readme.match(
+    /releases\/latest\/download\/(Tidebreak-macos-[\w-]+\.dmg)/,
+  )?.[1];
   assert.ok(macDownloadLink, "the README must publish a macOS download link");
   assert.ok(
     attachJob.includes(`downloads/${macDownloadLink}`),
     `attach_downloads must upload ${macDownloadLink}`,
   );
 
+  // The version-free Windows and Linux downloads are verified as one set.
+  const crossPlatform = attachJob.match(/cross_platform=\(\n([\s\S]*?)\n\s+\)/)?.[1];
+  assert.ok(crossPlatform, "attach_downloads must name the cross-platform downloads");
   for (const [platform, pattern] of [
     ["Windows", /releases\/latest\/download\/(Tidebreak-windows-[\w-]+\.exe)/],
     ["Linux AppImage", /releases\/latest\/download\/(Tidebreak-linux-[\w-]+\.AppImage)/],
     ["Linux Debian", /releases\/latest\/download\/(Tidebreak-linux-[\w-]+\.deb)/],
   ]) {
-    const downloadLink = readFileSync(repositoryFile("README.md"), "utf8")
-      .match(pattern)?.[1];
+    const downloadLink = readme.match(pattern)?.[1];
     assert.ok(downloadLink, `the README must publish a ${platform} download link`);
     assert.ok(
-      attachJob.includes(`downloads/${downloadLink}`),
-      `attach_downloads must upload ${downloadLink}`,
+      crossPlatform.split("\n").map((line) => line.trim()).includes(downloadLink),
+      `attach_downloads must verify ${downloadLink}`,
     );
   }
 });
@@ -2519,14 +2318,11 @@ function assertPerArchSlicesAreJoined(source, label) {
   }
 }
 
-test("universal macOS release and staging packages contain both slices", () => {
+test("universal macOS release packages contain both slices", () => {
   const release = workflows["release.yml"];
-  const stagingPublish = workflows["staging-publish.yml"];
   const releasePrepare = workflowJob(release, "prepare_macos");
   const releaseCombine = workflowJob(release, "combine_macos");
   const releaseBuild = workflowJob(release, "build_macos");
-  const stagingBuild = workflowJob(stagingPublish, "build_macos_staging");
-  const stagingPrepare = workflowJob(stagingPublish, "prepare_macos_staging");
   const sidecarPreparation = readFileSync(
     repositoryFile("crates/tidebreak-desktop/scripts/prepare-sidecar.mjs"),
     "utf8",
@@ -2569,29 +2365,12 @@ test("universal macOS release and staging packages contain both slices", () => {
   assert.match(releasePrepare, /macos-release-target-v5-\$\{\{ matrix\.target \}\}/);
   assert.doesNotMatch(releasePrepare, /macos-release-target-v5-universal/);
   assert.match(releaseBuild, /--target universal-apple-darwin/);
-  assert.match(releaseBuild, /needs: \[validate, inspect_hosted, notices, combine_macos\]/);
+  assert.match(releaseBuild, /needs: \[validate, notices, combine_macos\]/);
   assert.match(releaseBuild, /tauri bundle/);
   assert.doesNotMatch(releaseBuild, /tauri-apps\/tauri-action@/);
   assert.doesNotMatch(releaseBuild, /rustup target add/);
 
-  // Staging still compiles the synthetic universal target once, but transfers
-  // its prepared bytes instead of rebuilding them in the signing job.
-  assert.match(stagingPrepare, /tauri-apps\/tauri-action@/);
-  assert.match(
-    stagingPrepare,
-    /rustup target add aarch64-apple-darwin x86_64-apple-darwin/,
-  );
-  assert.match(stagingPrepare, /--target universal-apple-darwin/);
-  assert.match(stagingPrepare, /Upload prepared staging macOS inputs/);
-  assert.match(stagingBuild, /Download prepared staging macOS inputs/);
-  assert.match(stagingBuild, /shasum -a 256 --check/);
-  assert.match(stagingBuild, /--target universal-apple-darwin/);
-  assert.match(stagingBuild, /tauri bundle/);
-  assert.doesNotMatch(stagingBuild, /tauri-apps\/tauri-action@/);
-  assert.doesNotMatch(stagingBuild, /rustup target add/);
-  assert.doesNotMatch(stagingPublish, /actions\/cache\/(?:restore|save)@/);
-
-  for (const job of [releaseBuild, stagingBuild]) {
+  for (const job of [releaseBuild]) {
     assert.match(job, /timeout-minutes: 90/);
     assert.match(job, /lipo -archs "\$app_path\/Contents\/MacOS\/\$executable"/);
     assert.match(job, /\$binary_arches" = \*arm64\*/);
@@ -2603,6 +2382,10 @@ test("universal macOS release and staging packages contain both slices", () => {
   }
 });
 
+// The computer-use helper's signing identifier, derived from the app identity.
+const CU_HELPER_IDENTIFIER = "io.brightwave.tidebreak.cu-helper";
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 test("macOS computer-use helper survives packaging and is signed before bundling", () => {
   const release = workflows["release.yml"];
   const combine = workflowJob(release, "combine_macos");
@@ -2612,7 +2395,6 @@ test("macOS computer-use helper survives packaging and is signed before bundling
 
   for (const [source, prepareName, buildName, bundleName] of [
     [release, "prepare_macos", "build_macos", "Bundle and sign the prepared Tauri app"],
-    [workflows["staging-publish.yml"], "prepare_macos_staging", "build_macos_staging", "Bundle and sign the prepared staging app"],
   ]) {
     const prepare = workflowJob(source, prepareName);
     const build = workflowJob(source, buildName);
@@ -2632,14 +2414,23 @@ test("macOS computer-use helper survives packaging and is signed before bundling
     const signing = build.match(/      - name: Sign the computer-use helper resource\n[\s\S]*?(?=\n      - name:)/)?.[0];
     assert.ok(signing, `${buildName} must sign the helper before bundling`);
     assert.match(signing, /codesign --force --options runtime --timestamp/);
-    assert.match(signing, /--identifier io\.brightwave\.tidebreak\.cu-helper/);
+    assert.ok(signing.includes(`--identifier ${CU_HELPER_IDENTIFIER}`));
     assert.match(signing, /--sign "\$APPLE_SIGNING_IDENTITY"/);
     assert.match(signing, /--keychain "\$APPLE_SIGNING_KEYCHAIN"/);
     assert.match(signing, /codesign --verify --strict --verbose=2 "\$cu_resource"/);
+    // Without Apple signing the helper is signed ad-hoc, with the same
+    // identifier, so the app's own ad-hoc signature still covers it.
+    assert.match(signing, /if \[\[ "\$SIGNING_MODE" = developer-id \]\]; then/);
+    assert.match(
+      signing,
+      new RegExp(
+        `--timestamp=none \\\\\\n\\s+--identifier ${escapeRegExp(CU_HELPER_IDENTIFIER)} \\\\\\n\\s+--sign - \\\\\\n`,
+      ),
+    );
     assert.ok(build.indexOf(signing) > build.indexOf("- name: Import Developer ID certificate"));
     assert.ok(build.indexOf(signing) < build.indexOf(`- name: ${bundleName}`));
 
-    const verifyAt = build.search(/- name: Verify and collect (?:signed|staging) artifacts/);
+    const verifyAt = build.search(/- name: Verify and collect signed artifacts/);
     assert.notEqual(verifyAt, -1, `${buildName} must verify its packaged helper`);
     const verify = build.slice(verifyAt);
     assert.match(verify, /cu_helper="\$app_path\/Contents\/Resources\/host-broker\/tidebreak-cu-helper"/);
@@ -2647,8 +2438,10 @@ test("macOS computer-use helper survives packaging and is signed before bundling
     assert.match(verify, /helper_arches="\$\(lipo -archs "\$cu_helper"\)"/);
     assert.match(verify, /\[\[ "\$helper_arches" = \*arm64\* && "\$helper_arches" = \*x86_64\* \]\]/);
     assert.match(verify, /codesign --verify --strict --verbose=2 "\$cu_helper"/);
-    assert.match(verify, /\[\[ "\$helper_identifier" = io\.brightwave\.tidebreak\.cu-helper \]\]/);
+    assert.ok(verify.includes(`[[ "$helper_identifier" = ${CU_HELPER_IDENTIFIER} ]]`));
     assert.match(verify, /\[\[ -n "\$app_team" && "\$app_team" != "not set" && "\$helper_team" = "\$app_team" \]\]/);
+    assert.match(verify, /grep -qx 'Signature=adhoc' <<<"\$helper_signature"/);
+    assert.match(verify, /grep -qx 'Signature=adhoc' <<<"\$app_signature"/);
   }
 
   assert.ok(combine.includes('"./crates/tidebreak-desktop/binaries/tidebreak-cu-helper-$target"'));
@@ -2660,7 +2453,7 @@ test("macOS computer-use helper survives packaging and is signed before bundling
   assert.match(shell(combine), /shasum -a 256 [^\n]*"\$cu_helper" > SHA256SUMS/);
 });
 
-test("release and staging share one third-party notices implementation", () => {
+test("the release checks third-party notices through the shared workflow", () => {
   const noticesWorkflow = workflows["third-party-notices.yml"];
   const notices = workflowJob(noticesWorkflow, "check");
   assert.equal(
@@ -2699,11 +2492,6 @@ test("release and staging share one third-party notices implementation", () => {
         "build_linux",
       ],
     },
-    {
-      file: "staging-publish.yml",
-      validate: "validate_staging",
-      platformJobs: ["prepare_macos_staging", "build_macos_staging"],
-    },
   ]) {
     const source = workflows[file];
     const caller = workflowJob(source, "notices");
@@ -2726,22 +2514,19 @@ test("release and staging share one third-party notices implementation", () => {
   }
 });
 
-test("staging smoke-tests packaged GitHub CLI discovery before upload", () => {
-  const stagingBuild = workflowJob(
-    workflows["staging-publish.yml"],
-    "build_macos_staging",
-  );
-  const verifyAt = stagingBuild.indexOf("Verify and collect signed artifacts");
-  const smokeAt = stagingBuild.indexOf(
+test("the release smoke-tests packaged GitHub CLI discovery before upload", () => {
+  const releaseBuild = workflowJob(workflows["release.yml"], "build_macos");
+  const verifyAt = releaseBuild.indexOf("Verify and collect signed artifacts");
+  const smokeAt = releaseBuild.indexOf(
     "Smoke-test packaged GitHub CLI discovery",
   );
-  const uploadAt = stagingBuild.indexOf("Upload verified macOS artifacts");
+  const uploadAt = releaseBuild.indexOf("Upload verified macOS artifacts");
   assert.ok(
-    verifyAt < smokeAt && smokeAt < uploadAt,
+    verifyAt !== -1 && verifyAt < smokeAt && smokeAt < uploadAt,
     "the packaged-app smoke check must run after verification and before upload",
   );
   assert.match(
-    stagingBuild.slice(smokeAt, uploadAt),
+    releaseBuild.slice(smokeAt, uploadAt),
     /scripts\/smoke-packaged-gh-discovery\.sh "\$\{app_paths\[0\]\}"/,
   );
 
@@ -2784,155 +2569,24 @@ test("the packaged updater trusts the production signing key and endpoint", () =
   ]);
 });
 
-test("staging desktop publishes only under the staging prefix", () => {
-  const staging = workflows["staging.yml"];
-  assert.ok(staging);
-  // Staging polls main's tip. A per-push trigger only queued merges behind
-  // each other on the one publish group, and GitHub cancelled the runs it
-  // could not keep pending. It must never build a pull request's code.
-  assert.match(
-    staging,
-    /^on:\n(?:  #[^\n]*\n)*  schedule:\n    - cron: "[^"]+"$/m,
+test("no staging channel is built or hosted", () => {
+  for (const name of ["staging.yml", "staging-publish.yml", "staging-prune.yml"]) {
+    assert.equal(workflows[name], undefined, `${name} must stay removed`);
+  }
+  assert.equal(
+    existsSync(
+      repositoryFile("crates", "tidebreak-desktop", "tauri.staging.conf.json"),
+    ),
+    false,
+    "the staging overlay must stay removed",
   );
-  assert.doesNotMatch(staging, /^\s*push:/m);
-  // The poll builds only when a staged path moved since the build the channel
-  // already hosts, which is the filter the push trigger's `paths` list was.
-  assert.match(staging, /staging\/manifest\.json\?poll=/);
-  assert.match(staging, /git diff --name-only "\$hosted" "\$STAGING_SHA"/);
-  assert.match(staging, /\.github\/workflows\/third-party-notices\.yml/);
-  assert.match(
-    staging,
-    /if: \$\{\{ needs\.resolve\.outputs\.changed == 'true' \}\}/,
-  );
-  assert.match(staging, /^  workflow_dispatch:$/m);
-  assert.doesNotMatch(staging, /^\s*pull_request(?:_target)?:/m);
-  assert.match(staging, /^permissions:\n  contents: read$/m);
-  assert.match(staging, /group: tidebreak-desktop-staging/);
-  assert.match(staging, /cancel-in-progress: true/);
-  assert.match(
-    staging,
-    /uses: \.\/\.github\/workflows\/(release|staging-publish)\.yml/,
-  );
-  assert.match(staging, /channel: staging/);
-  assert.match(staging, /secrets: inherit/);
-  assert.doesNotMatch(staging, /secrets\./);
-  assert.doesNotMatch(staging, /desktop-production|tidebreak\/latest\.json/);
-
-  const release = workflows["release.yml"];
-  const stagingPublish = workflows["staging-publish.yml"];
-  if (stagingPublish) {
-    assert.match(stagingPublish, /^on:\n  workflow_call:\n/m);
-    assert.doesNotMatch(stagingPublish, /github\.event_name == 'workflow_call'/);
-    assert.doesNotMatch(stagingPublish, /^\s*pull_request(?:_target)?:/m);
-    assert.match(stagingPublish, /^permissions:\n  contents: read$/m);
-    assert.match(stagingPublish, /group: tidebreak-desktop-staging-build/);
-    assert.match(stagingPublish, /cancel-in-progress: false/);
-    assert.doesNotMatch(stagingPublish, /tidebreak\/latest\.json/);
-    assert.doesNotMatch(release, /^  workflow_call:\n/m);
-  } else {
-    assert.match(release, /^  workflow_call:\n/m);
-    assert.match(
-      release,
-      /inputs\.channel == 'staging'\n      && 'tidebreak-desktop-staging-build'/,
-    );
-    assert.match(
-      release,
-      /cancel-in-progress: \$\{\{ inputs\.channel == 'staging' \}\}/,
+  for (const [name, source] of Object.entries(workflows)) {
+    assert.doesNotMatch(
+      source,
+      /desktop-staging|tauri\.staging\.conf\.json|channel: staging/,
+      `${name} must not build or publish a staging channel`,
     );
   }
-
-  const publishStaging = workflowJob(
-    stagingPublish ?? release,
-    "publish_staging",
-  );
-  assert.match(publishStaging, /environment:\n      name: desktop-staging/);
-  assert.match(
-    publishStaging,
-    /RELEASE_BASE_URL: https:\/\/downloads\.brightwave\.io\/tidebreak\/staging/,
-  );
-  assert.match(publishStaging, /--channel staging/);
-  assert.match(publishStaging, /tidebreak\/staging\/latest\.json/);
-  assert.match(publishStaging, /desktop-channel\.mjs --assert-key staging/);
-  assert.doesNotMatch(
-    publishStaging,
-    /s3:\/\/\$DOWNLOADS_S3_BUCKET\/tidebreak\/latest\.json/,
-  );
-  assert.doesNotMatch(publishStaging, /tidebreak\/releases\/v\$TIDEBREAK_VERSION/);
-  assert.match(publishStaging, /scripts\/prune-staging-releases\.sh/);
-  assert.doesNotMatch(publishStaging, /STAGING_PRUNE_DRY_RUN/);
-  const stagingSignedUpload = workflowJob(
-    stagingPublish ?? release,
-    "build_macos_staging",
-  );
-  const signedUploadAt = stagingSignedUpload.indexOf(
-    "Upload verified macOS artifacts",
-  );
-  assert.notEqual(signedUploadAt, -1);
-  assert.match(
-    stagingSignedUpload.slice(signedUploadAt, signedUploadAt + 400),
-    /retention-days: 1/,
-  );
-
-  const stagingPrune = workflows["staging-prune.yml"];
-  assert.ok(stagingPrune);
-  assert.match(stagingPrune, /^on:\n  schedule:\n    - cron: "[^"]+"$/m);
-  assert.match(stagingPrune, /^  workflow_dispatch:$/m);
-  assert.match(
-    stagingPrune,
-    /dry_run:\n        description: [^\n]+\n        required: false\n        default: true\n        type: boolean/,
-  );
-  assert.doesNotMatch(stagingPrune, /^\s*pull_request(?:_target)?:/m);
-  assert.doesNotMatch(stagingPrune, /^\s*push:/m);
-  assert.match(stagingPrune, /^permissions:\n  contents: read$/m);
-  assert.match(stagingPrune, /^  group: tidebreak-desktop-staging-prune$/m);
-  assert.doesNotMatch(
-    stagingPrune,
-    /^  group: tidebreak-desktop-staging-build$/m,
-  );
-  assert.match(stagingPrune, /cancel-in-progress: false/);
-  assert.match(stagingPrune, /if: \$\{\{ github\.ref == 'refs\/heads\/main' \}\}/);
-  assert.match(stagingPrune, /environment:\n      name: desktop-staging/);
-  assert.match(stagingPrune, /id-token: write/);
-  assert.match(stagingPrune, /scripts\/prune-staging-releases\.sh/);
-  assert.match(
-    stagingPrune,
-    /uses: aws-actions\/configure-aws-credentials@[0-9a-f]{40}/,
-  );
-  assert.doesNotMatch(stagingPrune, /secrets\./);
-  assert.doesNotMatch(stagingPrune, /desktop-production/);
-  assert.doesNotMatch(stagingPrune, /tidebreak\/latest\.json/);
-  assert.doesNotMatch(stagingPrune, /tidebreak\/releases\//);
-  assert.match(stagingPrune, /github\.event\.inputs\.dry_run \|\| false/);
-  assert.match(
-    stagingPrune,
-    /role-session-name: tidebreak-staging-prune-\$\{\{ github\.run_id \}\}/,
-  );
-
-  const stagingOverlay = JSON.parse(
-    readFileSync(
-      repositoryFile("crates", "tidebreak-desktop", "tauri.staging.conf.json"),
-      "utf8",
-    ),
-  );
-  assert.equal(stagingOverlay.identifier, "io.brightwave.tidebreak.staging");
-  const stagingPubkey = stagingOverlay.plugins.updater.pubkey;
-  const productionPubkey = tauriConfig.plugins.updater.pubkey;
-  assert.ok(stagingPubkey, "staging overlay must set plugins.updater.pubkey");
-  assert.notEqual(
-    stagingPubkey,
-    productionPubkey,
-    "staging must not share the production updater public key",
-  );
-  assert.match(
-    Buffer.from(stagingPubkey, "base64").toString("utf8"),
-    /minisign public key/,
-  );
-  assert.deepEqual(stagingOverlay.plugins.updater.endpoints, [
-    "https://downloads.brightwave.io/tidebreak/staging/latest.json",
-  ]);
-  assert.deepEqual(stagingOverlay.plugins["deep-link"].desktop.schemes, [
-    "tidebreak-staging",
-  ]);
 });
 
 test("updater transition policy rejects unsafe ordering mutations", () => {
@@ -3200,7 +2854,7 @@ test("Windows and Linux packaging is paused behind the platforms input", () => {
   // Downstream jobs accept a skipped Windows or Linux build only while the run
   // was dispatched without those platforms; a failed or missing build still
   // blocks publication when they were requested.
-  for (const jobName of ["publish", "attach_downloads"]) {
+  for (const jobName of ["attach_downloads"]) {
     const job = workflowJob(release, jobName);
     for (const build of ["build_windows", "build_linux"]) {
       assert.match(
@@ -3221,26 +2875,13 @@ test("Windows and Linux packaging is paused behind the platforms input", () => {
   }
 
   // Manifests follow the selection everywhere they are created or checked.
-  const publishJob = workflowJob(release, "publish");
-  assert.match(publishJob, /create-release-manifests\.mjs[\s\S]*?--platforms "\$RELEASE_PLATFORMS"/);
-  assert.match(publishJob, /prepare-published-release\.mjs[\s\S]*?--platforms "\$RELEASE_PLATFORMS"/);
-  assert.match(
-    workflowJob(release, "inspect_hosted"),
-    new RegExp(
-      `prepare-published-release\\.mjs[\\s\\S]*?--platforms "\\$\\{\\{ inputs\\.platforms \\|\\| '${platformDefault}' \\}\\}"`,
-    ),
-  );
+  const attachJob = workflowJob(release, "attach_downloads");
+  assert.match(attachJob, /create-release-manifests\.mjs[\s\S]*?--platforms "\$RELEASE_PLATFORMS"/);
+  assert.match(attachJob, /prepare-published-release\.mjs[\s\S]*?--platforms "\$RELEASE_PLATFORMS"/);
 
   // Paused platforms download nothing, and the README's permanent links keep
   // serving the last builds that shipped.
-  const attachJob = workflowJob(release, "attach_downloads");
   for (const label of ["x86_64 Windows", "ARM64 Windows", "x86_64 Linux", "ARM64 Linux"]) {
-    assert.match(
-      publishJob,
-      new RegExp(
-        `- name: Download ${label} artifacts\\n\\s+if: >-\\n\\s+\\$\\{\\{\\n\\s+inputs\\.platforms == 'all'`,
-      ),
-    );
     assert.match(
       attachJob,
       new RegExp(
@@ -3255,6 +2896,8 @@ test("Windows and Linux packaging is paused behind the platforms input", () => {
   assert.match(carryForward, /inputs\.platforms != 'all'/);
   assert.match(carryForward, /releases\/latest" --jq \.tag_name/);
   assert.match(carryForward, /"\$previous" != "\$RELEASE_TAG"/);
+  // The first release in a repository has nothing to carry.
+  assert.match(carryForward, /if \[\[ -z "\$previous" \]\]; then[\s\S]*?exit 0/);
   for (const name of [
     "Tidebreak-windows-x86_64-setup.exe",
     "Tidebreak-windows-aarch64-setup.exe",
@@ -3269,4 +2912,93 @@ test("Windows and Linux packaging is paused behind the platforms input", () => {
   // Versioned packages and updater signatures never travel with the carried
   // downloads, so the updater feed cannot offer a stale Windows or Linux build.
   assert.doesNotMatch(carryForward, /\.sig|Tidebreak_\$\{TIDEBREAK_VERSION\}/);
+});
+
+test("releases publish only to GitHub Releases, with no other hosting", () => {
+  for (const [name, source] of Object.entries(workflows)) {
+    assert.doesNotMatch(
+      source,
+      /aws-actions\/|arn:aws|\baws s3\b|cloudfront|DOWNLOADS_S3_BUCKET|AWS_RELEASE_ROLE_ARN/i,
+      `${name} must not publish to AWS`,
+    );
+    assert.doesNotMatch(
+      source,
+      /\bdownloads\.[a-z]+\.io\b|tidebreak\.io\b/,
+      `${name} must not publish to a hosted download domain`,
+    );
+    assert.doesNotMatch(source, /vercel/i, `${name} must not deploy to Vercel`);
+    assert.doesNotMatch(
+      source,
+      /vars\.(?:CI_[A-Z_]*RUNNER|RELEASE_[A-Z0-9_]*RUNNER)/,
+      `${name} must run on standard hosted runners`,
+    );
+  }
+  assert.equal(existsSync(repositoryFile(".github", "vercel-cli")), false);
+
+  const release = workflows["release.yml"];
+  for (const name of ["inspect_hosted", "publish", "build_docs", "publish_docs"]) {
+    assert.doesNotMatch(release, new RegExp(`^  ${name}:\\n`, "m"));
+  }
+  for (const jobName of ["build_macos", "build_windows", "build_linux"]) {
+    assert.match(
+      workflowJob(release, jobName),
+      /environment:\n      name: desktop-production\n      url: https:\/\/github\.com\/\$\{\{ github\.repository \}\}\/releases\/tag\/\$\{\{ needs\.validate\.outputs\.tag \}\}\n/,
+    );
+  }
+});
+
+test("Apple signing is optional, and an ad-hoc macOS release says so", () => {
+  const release = workflows["release.yml"];
+  const build = workflowJob(release, "build_macos");
+  const finalize = workflowJob(release, "finalize_release");
+  const step = (name) =>
+    build.match(
+      new RegExp(`      - name: ${name}\\n[\\s\\S]*?(?=\\n      - name:|$)`),
+    )?.[0];
+
+  // Tauri's bundler reads APPLE_SIGNING_IDENTITY from the environment even
+  // when it is empty, which would override the ad-hoc identity, so no Apple
+  // value may sit in the job-level environment.
+  const jobEnv = build.match(/^    env:\n[\s\S]*?(?=^    steps:)/m)?.[0] ?? "";
+  assert.doesNotMatch(jobEnv, /APPLE_/);
+  assert.match(build, /outputs:\n      signing: \$\{\{ steps\.signing\.outputs\.mode \}\}/);
+
+  const validate = step("Validate production signing configuration");
+  assert.ok(validate, "build_macos must validate its signing configuration");
+  assert.match(validate, /id: signing/);
+  assert.match(validate, /Missing updater signing configuration/);
+  assert.match(validate, /echo "mode=developer-id" >> "\$GITHUB_OUTPUT"/);
+  assert.match(validate, /echo "mode=adhoc" >> "\$GITHUB_OUTPUT"/);
+  assert.match(validate, /Incomplete Apple signing configuration/);
+
+  for (const name of [
+    "Import Developer ID certificate",
+    "Prepare App Store Connect key",
+    "Notarize the DMG, then staple the DMG and app",
+  ]) {
+    assert.match(
+      step(name) ?? "",
+      /\n        if: \$\{\{ steps\.signing\.outputs\.mode == 'developer-id' \}\}\n/,
+      `${name} must run only with Apple signing`,
+    );
+  }
+  assert.match(
+    step("Add the macOS signing identity to the prepared configuration") ?? "",
+    /process\.env\.SIGNING_MODE === "developer-id"\n\s+\? process\.env\.APPLE_SIGNING_IDENTITY\n\s+: "-"/,
+  );
+  const verify = step("Verify and collect signed artifacts") ?? "";
+  assert.match(
+    verify,
+    /if \[\[ "\$SIGNING_MODE" = developer-id \]\]; then\n\s+xcrun stapler validate "\$app_path"\n\s+spctl --assess/,
+  );
+
+  assert.match(
+    finalize,
+    /MACOS_SIGNING: \$\{\{ needs\.build_macos\.outputs\.signing \}\}/,
+  );
+  assert.match(finalize, /if \[\[ "\$MACOS_SIGNING" = adhoc \]\]; then/);
+  assert.match(finalize, /ad-hoc signed and not notarized by Apple/);
+  assert.match(finalize, /Open Anyway/);
+  assert.match(finalize, /allow keychain access/);
+  assert.match(finalize, /The macOS build reported no signing mode/);
 });

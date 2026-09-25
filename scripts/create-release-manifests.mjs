@@ -11,8 +11,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { parseReleaseTag } from "./check-release-tag.mjs";
-import { desktopChannel } from "./desktop-channel.mjs";
-import { parseStagingVersion, stagingTag } from "./staging-version.mjs";
+import { desktopChannel, releaseAssetUrl } from "./desktop-channel.mjs";
 
 // The platforms, architectures, and artifact formats a release ships. This is
 // the single source of truth for what a release contains: it drives the
@@ -70,12 +69,7 @@ export const RELEASE_PLATFORMS = [
   LINUX_PLATFORM,
 ];
 
-// Staging remains the signed macOS channel described by decision 16. Production
-// platform expansion must not make that independent workflow require packages
-// it does not build.
-export const STAGING_RELEASE_PLATFORMS = [MACOS_PLATFORM];
-
-// The production platform selections a release run can dispatch with. Windows
+// The platform selections a release run can dispatch with. Windows
 // and Linux packaging is paused (`macos` is the workflow default) until someone
 // needs a newer build; `all` restores the full set without a code change. See
 // docs/releases.md.
@@ -84,8 +78,7 @@ export const RELEASE_PLATFORM_SELECTIONS = {
   macos: [MACOS_PLATFORM],
 };
 
-export function releasePlatforms(channel, selection = "all") {
-  if (channel === "staging") return STAGING_RELEASE_PLATFORMS;
+export function releasePlatforms(selection = "all") {
   const platforms = RELEASE_PLATFORM_SELECTIONS[selection];
   if (!platforms) {
     throw new Error(
@@ -108,7 +101,7 @@ function parseOptions(args) {
     const value = args[index + 1];
     if (!flag?.startsWith("--") || value === undefined) {
       throw new Error(
-        "usage: create-release-manifests.mjs --dist <path> --version <semver> --tag <tag> --sha <commit> --published-at <date> --base-url <url> [--channel production|staging] [--platforms all|macos]",
+        "usage: create-release-manifests.mjs --dist <path> --version <semver> --tag <tag> --sha <commit> --published-at <date> --base-url <url> [--platforms all|macos]",
       );
     }
     options.set(flag.slice(2), value);
@@ -118,11 +111,6 @@ function parseOptions(args) {
 
 function sha256(file) {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
-}
-
-function publicUrl(baseUrl, version, filename) {
-  const encodedPath = filename.split("/").map(encodeURIComponent).join("/");
-  return `${baseUrl}/releases/v${version}/${encodedPath}`;
 }
 
 function requireFile(file) {
@@ -206,31 +194,24 @@ export function createLatestDocument({
   };
 }
 
-function assertChannelVersion({ channelId, version, tag, baseUrl }) {
-  const channel = desktopChannel(channelId);
+// The feed must point where the packaged updater looks: this repository's
+// release downloads, under the tag being published.
+function assertReleaseSource({ version, tag, baseUrl }) {
+  const channel = desktopChannel("production");
   const parsedBaseUrl = new URL(baseUrl);
   if (
     parsedBaseUrl.protocol !== "https:" ||
-    parsedBaseUrl.hostname !== "downloads.brightwave.io"
+    parsedBaseUrl.hostname !== "github.com"
   ) {
-    throw new Error("release base URL must use https://downloads.brightwave.io");
+    throw new Error(
+      "release base URL must be a https://github.com release download URL",
+    );
   }
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
   if (normalizedBaseUrl !== channel.baseUrl) {
     throw new Error(
-      `${channelId} base URL must be ${channel.baseUrl}, not ${normalizedBaseUrl}`,
+      `production base URL must be ${channel.baseUrl}, not ${normalizedBaseUrl}`,
     );
-  }
-
-  if (channelId === "staging") {
-    const parsed = parseStagingVersion(version);
-    if (!parsed) {
-      throw new Error(`invalid staging version: ${version}`);
-    }
-    if (tag !== stagingTag(version)) {
-      throw new Error(`staging tag ${tag} does not select version ${version}`);
-    }
-    return normalizedBaseUrl;
   }
 
   const parsedTag = parseReleaseTag(tag);
@@ -247,15 +228,9 @@ export function createReleaseManifests({
   sha,
   publishedAt,
   baseUrl,
-  channel = "production",
   platformSelection = "all",
 }) {
-  const normalizedBaseUrl = assertChannelVersion({
-    channelId: channel,
-    version,
-    tag,
-    baseUrl,
-  });
+  const normalizedBaseUrl = assertReleaseSource({ version, tag, baseUrl });
   if (!/^[0-9a-f]{40}$/.test(sha)) {
     throw new Error("release commit must be a full lowercase SHA-1");
   }
@@ -264,7 +239,7 @@ export function createReleaseManifests({
   }
   const distPath = path.resolve(dist);
   const artifacts = [];
-  const platforms = releasePlatforms(channel, platformSelection);
+  const platforms = releasePlatforms(platformSelection);
 
   for (const platformDescriptor of platforms) {
     for (const arch of platformDescriptor.architectures) {
@@ -278,26 +253,19 @@ export function createReleaseManifests({
 
         const digest = sha256(file);
         writeFileSync(`${file}.sha256`, `${digest}  ${filename}\n`);
-        const relativeFilename = path.posix.join(
-          platformDescriptor.platform,
-          arch,
-          filename,
-        );
-        const checksumFilename = `${relativeFilename}.sha256`;
+        // GitHub release assets are flat, and the file names already carry
+        // the version and architecture, so each file is its own asset name.
+        const checksumFilename = `${filename}.sha256`;
         const artifact = {
           platform: platformDescriptor.platform,
           arch,
           format: descriptor.format,
-          filename: relativeFilename,
-          url: publicUrl(normalizedBaseUrl, version, relativeFilename),
+          filename,
+          url: releaseAssetUrl(normalizedBaseUrl, tag, filename),
           size: statSync(file).size,
           sha256: digest,
           checksum_filename: checksumFilename,
-          checksum_url: publicUrl(
-            normalizedBaseUrl,
-            version,
-            checksumFilename,
-          ),
+          checksum_url: releaseAssetUrl(normalizedBaseUrl, tag, checksumFilename),
         };
 
         if (descriptor.updater) {
@@ -313,16 +281,16 @@ export function createReleaseManifests({
             `${signatureDigest}  ${path.basename(signatureFile)}\n`,
           );
           artifact.signature = signature;
-          artifact.signature_filename = `${relativeFilename}.sig`;
-          artifact.signature_url = publicUrl(
+          artifact.signature_filename = `${filename}.sig`;
+          artifact.signature_url = releaseAssetUrl(
             normalizedBaseUrl,
-            version,
+            tag,
             artifact.signature_filename,
           );
           artifact.signature_sha256 = signatureDigest;
-          artifact.signature_checksum_url = publicUrl(
+          artifact.signature_checksum_url = releaseAssetUrl(
             normalizedBaseUrl,
-            version,
+            tag,
             `${artifact.signature_filename}.sha256`,
           );
         }
@@ -367,7 +335,6 @@ function main() {
     sha: requiredOption(options, "sha"),
     publishedAt: requiredOption(options, "published-at"),
     baseUrl: requiredOption(options, "base-url"),
-    channel: options.get("channel") || "production",
     platformSelection: options.get("platforms") || "all",
   });
   console.log(JSON.stringify(result.manifest, null, 2));

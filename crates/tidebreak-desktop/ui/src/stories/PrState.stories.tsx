@@ -445,7 +445,7 @@ export const Stack: StoryObj = {
           <StackMap
             stack={stackMembers}
             currentNumber={2269}
-            url="https://github.com/brightwave-inc/tidebreak/pull/2269"
+            url="https://github.com/octo-org/tidebreak/pull/2269"
           />
         </div>
         <div>
@@ -455,7 +455,7 @@ export const Stack: StoryObj = {
           <StackMap
             stack={stackMembers}
             currentNumber={2271}
-            url="https://github.com/brightwave-inc/tidebreak/pull/2271"
+            url="https://github.com/octo-org/tidebreak/pull/2271"
           />
         </div>
       </div>

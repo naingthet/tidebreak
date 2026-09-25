@@ -1122,7 +1122,7 @@ describe("AddRepoPalette on a hosted machine that acts as the person", () => {
               description: "scratch",
             },
             {
-              full_name: "brightwave-inc/tidebreak",
+              full_name: "acme/tidebreak",
               private: true,
             },
           ],
@@ -1146,7 +1146,7 @@ describe("AddRepoPalette on a hosted machine that acts as the person", () => {
       .getAllByRole("option")
       .map((option) => option.textContent ?? "");
     expect(
-      names.findIndex((name) => /brightwave-inc\/tidebreak/.test(name)),
+      names.findIndex((name) => /acme\/tidebreak/.test(name)),
     ).toBeLessThan(names.findIndex((name) => /mira-chen\/notes/.test(name)));
     await user.click(screen.getByRole("option", { name: /mira-chen\/notes/ }));
     expect(

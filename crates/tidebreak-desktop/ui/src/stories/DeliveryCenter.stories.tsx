@@ -170,7 +170,7 @@ function storyClient(scenario: DeliveryScenario): ApiClient {
                 id: "ws-slack-child",
                 title: "Slack child checkpoint canary",
                 repo_id: "34d3c38b-6a66-49c6-b4f6-ee9e6ddc93a2",
-                repo_display_name: "brightwave-inc/slack-canary",
+                repo_display_name: "octo-org/slack-canary",
                 worktree_path: "remote:ws-slack-child",
                 read_only: true,
               },
@@ -279,11 +279,11 @@ function storyClient(scenario: DeliveryScenario): ApiClient {
                 {
                   repository: {
                     host: "github.com",
-                    owner: "brightwave-inc",
+                    owner: "octo-org",
                     name: "docs",
                   },
                   kind: "rate_limited",
-                  message: "brightwave-inc/docs could not be refreshed yet.",
+                  message: "octo-org/docs could not be refreshed yet.",
                   retry_at: "2026-08-20T15:35:00.000Z",
                 },
               ]
@@ -746,7 +746,7 @@ export const ArchiveRepositoryNames: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const names = await canvas.findAllByText("brightwave-inc/slack-canary");
+    const names = await canvas.findAllByText("octo-org/slack-canary");
     await expect(names.some((name) => name.checkVisibility())).toBe(true);
     await expect(
       canvas.queryByText("34d3c38b-6a66-49c6-b4f6-ee9e6ddc93a2"),
