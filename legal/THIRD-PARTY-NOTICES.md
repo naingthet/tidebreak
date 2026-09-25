@@ -7246,7 +7246,7 @@ License identifiers named across all declared expressions:
 - Repository: https://github.com/101arrowz/fflate
 - License text: `LICENSE` ([L-0a1df3a083d0](#l-0a1df3a083d0))
 
-### framer-motion 13.4.0
+### framer-motion 13.4.1
 
 - License: `MIT`
 - Repository: https://github.com/motiondivision/motion/
@@ -7822,13 +7822,13 @@ License identifiers named across all declared expressions:
 - Repository: https://github.com/microsoft/monaco-editor
 - License text: `LICENSE` ([L-806766baa900](#l-806766baa900))
 
-### motion 13.4.0
+### motion 13.4.1
 
 - License: `MIT`
 - Repository: https://github.com/motiondivision/motion
 - License text: `LICENSE.md` ([L-bb59eb35f694](#l-bb59eb35f694))
 
-### motion-dom 13.3.0
+### motion-dom 13.4.1
 
 - License: `MIT`
 - Repository: https://github.com/motiondivision/motion
@@ -8020,7 +8020,7 @@ License identifiers named across all declared expressions:
 - Repository: https://github.com/theKashey/react-remove-scroll-bar
 - License text: not distributed with this package
 
-### react-resizable-panels 4.13.1
+### react-resizable-panels 4.13.2
 
 - License: `MIT`
 - Repository: https://github.com/bvaughn/react-resizable-panels.git
