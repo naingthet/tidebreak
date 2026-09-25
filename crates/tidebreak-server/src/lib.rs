@@ -55,6 +55,7 @@ mod foreground_prompt;
 pub mod gateway_drafts;
 pub mod gateway_runtime;
 pub mod host_folders;
+pub mod identity_move;
 pub mod image_attachment;
 pub mod instructions;
 mod lane {

@@ -7344,6 +7344,7 @@ dependencies = [
  "cap-fs-ext",
  "cap-std",
  "chrono",
+ "dirs",
  "flate2",
  "futures",
  "libc",

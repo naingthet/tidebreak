@@ -37,7 +37,7 @@ test("stages and signs the Swift binary where the broker resolves it", (t) => {
   assert.equal(readFileSync(resource, "utf8"), "arm64");
   assert.equal(statSync(resource).mode & 0o777, 0o755);
   assert.equal(readFileSync(join(options.desktopDir, "binaries/tidebreak-cu-helper-aarch64-apple-darwin"), "utf8"), "arm64");
-  assert.deepEqual(calls.find(([command]) => command === "codesign"), ["codesign", "--force", "--sign", "Apple Development: Example (TEAM)", "--identifier", "io.brightwave.tidebreak.cu-helper.dev", resource]);
+  assert.deepEqual(calls.find(([command]) => command === "codesign"), ["codesign", "--force", "--sign", "Apple Development: Example (TEAM)", "--identifier", "io.github.naingthet.tidebreak.cu-helper.dev", resource]);
 });
 
 test("universal builds package both architectures and defer release signing", (t) => {

@@ -234,11 +234,11 @@ mod tests {
         let identity = select_app_identity(
             Some(AppIdentity {
                 name: Some("WK Acceptance".into()),
-                identifier: Some("io.brightwave.tidebreak.wkacceptance.test".into()),
+                identifier: Some("io.github.naingthet.tidebreak.wkacceptance.test".into()),
             }),
             AppIdentity {
                 name: Some("Tidebreak".into()),
-                identifier: Some("io.brightwave.tidebreak".into()),
+                identifier: Some("io.github.naingthet.tidebreak".into()),
             },
             "Tidebreak",
         );
@@ -246,7 +246,7 @@ mod tests {
             identity,
             (
                 "WK Acceptance".into(),
-                Some("io.brightwave.tidebreak.wkacceptance.test".into()),
+                Some("io.github.naingthet.tidebreak.wkacceptance.test".into()),
             ),
         );
     }
@@ -258,13 +258,13 @@ mod tests {
                 None,
                 AppIdentity {
                     name: Some("Tidebreak Dev".into()),
-                    identifier: Some("io.brightwave.tidebreak.dev".into()),
+                    identifier: Some("io.github.naingthet.tidebreak.dev".into()),
                 },
                 "Tidebreak",
             ),
             (
                 "Tidebreak Dev".into(),
-                Some("io.brightwave.tidebreak.dev".into())
+                Some("io.github.naingthet.tidebreak.dev".into())
             ),
         );
         for name in [None, Some(" ".into())] {
@@ -293,7 +293,7 @@ mod tests {
                     }),
                     AppIdentity {
                         name: Some("Embedded app".into()),
-                        identifier: Some("io.brightwave.tidebreak".into()),
+                        identifier: Some("io.github.naingthet.tidebreak".into()),
                     },
                     "Tidebreak",
                 ),

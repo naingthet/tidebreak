@@ -8,7 +8,11 @@
 /// Bundle ids blocked exactly and at a dotted boundary.
 pub const BLOCKED_CONTROL_BUNDLES: &[&str] = &[
     // Reserve Tidebreak's app family for the controlling host. A separate
-    // development target needs its own bundle id and isolated profile.
+    // development target needs its own bundle id and isolated profile. The
+    // family from before the app identity changed (decision 103) stays
+    // reserved too: an older build may still be installed, and it is
+    // Tidebreak all the same.
+    "io.github.naingthet.tidebreak",
     "io.brightwave.tidebreak",
     // OS security and credential surfaces.
     "com.apple.loginwindow",
@@ -78,6 +82,10 @@ mod tests {
     #[test]
     fn controlling_host_and_security_surfaces_remain_blocked() {
         for blocked in [
+            "io.github.naingthet.tidebreak",
+            "io.github.naingthet.tidebreak.dev",
+            "io.github.naingthet.tidebreak.staging",
+            "io.github.naingthet.tidebreak.cu-helper",
             "io.brightwave.tidebreak",
             "io.brightwave.tidebreak.staging",
             "io.brightwave.tidebreak.helper",
@@ -112,15 +120,19 @@ mod tests {
         }
     }
 
-    /// Tidebreak's own bundle identifier. The lookalikes below are derived
-    /// from it, so they follow the identity wherever it moves.
-    const OWN_BUNDLE: &str = "io.brightwave.tidebreak";
+    /// Tidebreak's own bundle identifier, and the one builds before decision
+    /// 103 ran under. The lookalikes below are derived from them, so they
+    /// follow the identity wherever it moves.
+    const OWN_BUNDLE: &str = "io.github.naingthet.tidebreak";
+    const PREVIOUS_BUNDLE: &str = "io.brightwave.tidebreak";
 
     #[test]
     fn separate_products_and_isolated_development_targets_are_available() {
         let sibling_product = OWN_BUNDLE.replace(".tidebreak", ".another-product");
+        let previous_sibling_product = PREVIOUS_BUNDLE.replace(".tidebreak", ".another-product");
         for bundle_id in [
             sibling_product.as_str(),
+            previous_sibling_product.as_str(),
             "dev.tidebreak.fixture",
             "dev.tidebreak.desktop-test",
             "com.apple.Notes",
@@ -133,10 +145,14 @@ mod tests {
     #[test]
     fn bundle_matching_does_not_classify_lookalike_names() {
         let lookalike_vendor = OWN_BUNDLE.replacen(".tidebreak", "x.tidebreak", 1);
+        let previous_lookalike_vendor = PREVIOUS_BUNDLE.replacen(".tidebreak", "x.tidebreak", 1);
+        let lookalike_suffix = format!("{OWN_BUNDLE}ish");
         for bundle_id in [
             "xcom.apple.SecurityAgent",
             "com.apple.SecurityAgentish",
             lookalike_vendor.as_str(),
+            previous_lookalike_vendor.as_str(),
+            lookalike_suffix.as_str(),
             "com.apple.Terminalized",
             "com.jetbrainsx.intellij",
             "",

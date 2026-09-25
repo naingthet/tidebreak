@@ -246,6 +246,23 @@ against the current platform set. A release published before a platform change
 fails that check on its artifact names and updater keys instead of passing
 with a different release shape.
 
+### The release that changes the app identity
+
+The desktop runs as `io.github.naingthet.tidebreak`. Releases before it ran as
+`io.brightwave.tidebreak`, and the identifier names the data folder, the
+webview's storage, the keychain entry, and the macOS permissions
+([decision 103](decisions/0103-tidebreak-runs-under-its-own-app-identity.md)).
+The updater still replaces the installed app in place. On its first launch the
+new build moves the previous identity's data folder, webview storage, and
+keychain item to its own before it opens anything, and says so once.
+
+What a person sees on macOS after that update: the app asks again for
+Accessibility and Screen Recording, because macOS grants them to an identity,
+and macOS may ask whether Tidebreak can use the keychain item the earlier
+build created. Before you publish the first release under the new identity,
+update a test machine from the last earlier release and check that its
+conversations, settings, window storage, and keys arrived.
+
 ### Paused platforms
 
 Windows and Linux packaging is paused. Nobody is asking for newer builds, and
@@ -589,7 +606,10 @@ either a feature or a breaking pre-1.0 change.
 
 Desktop upgrades from **v0.61.0** onward keep local data, and every 1.x
 release keeps that promise
-([decision 100](decisions/0100-the-1-0-compatibility-surface.md)). Schema
+([decision 100](decisions/0100-the-1-0-compatibility-surface.md)). That
+includes the update that changes the app identity: its first launch moves the
+data folder instead of starting an empty one
+([decision 103](decisions/0103-tidebreak-runs-under-its-own-app-identity.md)). Schema
 changes after that pin are appended migrations
 ([decision 61](decisions/0061-schema-changes-are-migrations.md)). Before an
 update applies a migration, the desktop app copies the database to

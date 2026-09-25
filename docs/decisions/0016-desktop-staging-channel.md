@@ -1,6 +1,8 @@
 # 16. Desktop Staging Channel from Main
 
-- Status: Accepted (amended 2026-08-21, see [Amendment](#amendment-2026-08-21))
+- Status: Accepted (amended 2026-08-21, see [Amendment](#amendment-2026-08-21);
+  identifiers and keychain services amended 2026-09-25, see
+  [Amendment](#amendment-2026-09-25))
 - Date: 2026-08-13
 - Owners: desktop and release
 - Related: [releases](../releases.md), [decision 15](0015-tidebreak-product-and-technical-identity.md)
@@ -211,3 +213,14 @@ takes a `force` input to build a tip the poll would skip.
 The concurrency rules above are unchanged: the caller still uses a per-run
 group, and the publish workflow still serializes with
 `cancel-in-progress: false` so an in-flight notarization finishes.
+
+## Amendment 2026-09-25
+
+[Decision 103](0103-tidebreak-runs-under-its-own-app-identity.md) gives the
+three channels their own identity. The identifiers are now
+`io.github.naingthet.tidebreak`, `io.github.naingthet.tidebreak.dev`, and
+`io.github.naingthet.tidebreak.staging`, and each channel keeps its
+credentials under a keychain service of the same name, production included.
+Product names, icons, schemes, feeds, and the rule that no two channels share
+any of them are unchanged. At launch each channel moves its profile from the
+identifier and keychain service in the table above.

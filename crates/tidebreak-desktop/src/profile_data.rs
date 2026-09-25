@@ -300,10 +300,8 @@ pub(crate) async fn delete_all_data(
              again. {error}"
         ));
     }
-    let keychain = match channel.keychain_service() {
-        Some(service) => KeychainSecretProvider::with_service(service),
-        None => KeychainSecretProvider::new(),
-    };
+    let services = keychain_services(channel);
+    let keychain = KeychainSecretProvider::with_service(services[0]);
     let keys = match tidebreak_server::secret_rehome::erasable_secret_keys(store.as_ref()).await {
         Ok(keys) => keys,
         Err(error) => {
@@ -346,6 +344,7 @@ pub(crate) async fn delete_all_data(
     if let Err(error) = tidebreak_server::secret_rehome::erase_secret_keys(&keychain, &keys).await {
         failures.push(format!("a keychain item: {error}"));
     }
+    failures.extend(erase_previous_services(&services, &keys).await);
     if !failures.is_empty() {
         for failure in &failures {
             eprintln!("tidebreak-desktop: delete all data: {failure}");
@@ -360,7 +359,37 @@ pub(crate) async fn delete_all_data(
         eprintln!("tidebreak-desktop: delete all data, final pass: {failure}");
     }
     let _ = tidebreak_server::secret_rehome::erase_secret_keys(&keychain, &keys).await;
+    let _ = erase_previous_services(&services, &keys).await;
     std::process::exit(0);
+}
+
+/// The keychain services Delete all data erases: the channel's own first,
+/// then the one builds before decision 103 kept this profile's credentials
+/// under. A move that was refused, or that could not remove the old item,
+/// left them there.
+fn keychain_services(channel: crate::channel::Channel) -> Vec<&'static str> {
+    let mut services = vec![channel.keychain_service()];
+    services.extend(
+        tidebreak_server::identity_move::identity_change(channel.identifier())
+            .map(|change| change.previous_keychain_service),
+    );
+    services
+}
+
+/// Erase `keys` from every service after the first. A failure there is a
+/// leftover to report, not a reason to stop: the item belongs to a build that
+/// is gone, and the profile's own keys are already erased.
+async fn erase_previous_services(services: &[&str], keys: &[String]) -> Vec<String> {
+    let mut failures = Vec::new();
+    for service in services.iter().skip(1) {
+        let keychain = KeychainSecretProvider::with_service(*service);
+        if let Err(error) =
+            tidebreak_server::secret_rehome::erase_secret_keys(&keychain, keys).await
+        {
+            failures.push(format!("a keychain item under {service}: {error}"));
+        }
+    }
+    failures
 }
 
 /// Every folder this computer keeps for Tidebreak, the data folder first.
@@ -547,6 +576,23 @@ fn remove_profile_folders(folders: &[PathBuf]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Delete all data leaves no credential behind under the service builds
+    /// before decision 103 used, where a refused or unfinished move kept it.
+    #[tokio::test]
+    async fn delete_all_data_erases_the_previous_identitys_keychain_item_too() {
+        use tidebreak_core::{SecretProvider, BUNDLE_KEY};
+
+        KeychainSecretProvider::use_mock();
+        let services = keychain_services(crate::channel::Channel::Production);
+        assert_eq!(services, ["io.github.naingthet.tidebreak", "tidebreak"]);
+        let previous = KeychainSecretProvider::with_service("tidebreak");
+        previous.set_secret(BUNDLE_KEY, "kept").await.unwrap();
+
+        let failures = erase_previous_services(&services, &[BUNDLE_KEY.to_owned()]).await;
+        assert!(failures.is_empty(), "{failures:?}");
+        assert_eq!(previous.get_secret(BUNDLE_KEY).await.unwrap(), None);
+    }
 
     #[test]
     fn every_profile_folder_goes_and_nothing_beside_it() {

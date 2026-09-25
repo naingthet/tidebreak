@@ -9,7 +9,8 @@ import {
 } from "@/settings/DataPrivacyPanel";
 
 const overview: DataOverview = {
-  data_dir: "/Users/alex/Library/Application Support/io.brightwave.tidebreak",
+  data_dir:
+    "/Users/alex/Library/Application Support/io.github.naingthet.tidebreak",
   storage: "sqlite",
   usage: [
     { category: "database", bytes: 187_695_104 },
@@ -143,7 +144,7 @@ export const LongPath: Story = {
       overview: {
         ...overview,
         data_dir:
-          "/Users/alexandra.montgomery-whitfield/Library/Application Support/io.brightwave.tidebreak.staging/profiles/secondary-workspace",
+          "/Users/alexandra.montgomery-whitfield/Library/Application Support/io.github.naingthet.tidebreak.staging/profiles/secondary-workspace",
       },
     }) as never,
   },

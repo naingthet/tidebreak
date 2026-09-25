@@ -13,7 +13,7 @@ export const PRODUCTION_UPDATER_ENDPOINT = `https://github.com/${RELEASE_REPOSIT
 export const DESKTOP_CHANNELS = Object.freeze({
   production: Object.freeze({
     id: "production",
-    identifier: "io.brightwave.tidebreak",
+    identifier: "io.github.naingthet.tidebreak",
     productName: "Tidebreak",
     scheme: "tidebreak",
     environment: "desktop-production",

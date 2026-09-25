@@ -479,7 +479,8 @@ fn page_reply(request: &Value) -> Scripted {
         }
         "Runtime.evaluate" => {
             let expression = request["params"]["expression"].as_str().unwrap_or("");
-            let value = if expression.contains("io.brightwave.tidebreak.chrome.agent-cursor") {
+            let value = if expression.contains("io.github.naingthet.tidebreak.chrome.agent-cursor")
+            {
                 if expression.contains("\"clear\":true") {
                     json!("cleared")
                 } else {

@@ -6,9 +6,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 // Tidebreak's previous maintainer is named only where the Apache-2.0 license
-// requires it: LICENSE and NOTICE. The app identity keeps its reverse-DNS form
-// until a separate change migrates it, so that exact string is allowed too.
-// Everything else in the tree uses neutral wording or the project's own home.
+// requires it: LICENSE and NOTICE. The app identity builds before decision 103
+// ran under keeps its reverse-DNS form where the move from it names it, so that
+// exact string is allowed too. Everything else in the tree uses neutral wording
+// or the project's own home.
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const self = relative(root, fileURLToPath(import.meta.url));
 const ALLOWED_FILES = new Set(["LICENSE", "NOTICE", self]);

@@ -732,13 +732,13 @@ jobs:
           }
           if [[ "$SIGNING_MODE" = developer-id ]]; then
             codesign --force --options runtime --timestamp \
-              --identifier io.brightwave.tidebreak.cu-helper \
+              --identifier io.github.naingthet.tidebreak.cu-helper \
               --sign "$APPLE_SIGNING_IDENTITY" \
               --keychain "$APPLE_SIGNING_KEYCHAIN" \
               "$cu_resource"
           else
             codesign --force --options runtime --timestamp=none \
-              --identifier io.brightwave.tidebreak.cu-helper \
+              --identifier io.github.naingthet.tidebreak.cu-helper \
               --sign - \
               "$cu_resource"
           fi
@@ -951,7 +951,7 @@ jobs:
           helper_identifier="$(printf '%s\n' "$helper_signature" | sed -n 's/^Identifier=//p')"
           helper_team="$(printf '%s\n' "$helper_signature" | sed -n 's/^TeamIdentifier=//p')"
           app_team="$(printf '%s\n' "$app_signature" | sed -n 's/^TeamIdentifier=//p')"
-          [[ "$helper_identifier" = io.brightwave.tidebreak.cu-helper ]] || {
+          [[ "$helper_identifier" = io.github.naingthet.tidebreak.cu-helper ]] || {
             echo "Computer-use helper has an unexpected signing identifier: $helper_identifier" >&2
             exit 1
           }

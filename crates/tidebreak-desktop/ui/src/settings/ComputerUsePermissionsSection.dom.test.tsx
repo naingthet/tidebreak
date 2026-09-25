@@ -18,7 +18,7 @@ import { ComputerUsePermissionsSection } from "./ComputerUsePermissionsSection";
 const missing: ComputerUsePermissionStatus = {
   status: "available",
   appName: "WK Acceptance",
-  appIdentifier: "io.brightwave.tidebreak.wkacceptance.test",
+  appIdentifier: "io.github.naingthet.tidebreak.wkacceptance.test",
   accessibility: false,
   screenRecording: true,
 };

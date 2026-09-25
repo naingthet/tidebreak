@@ -13,8 +13,10 @@ terminal step, **(repo)** = already done in this repository.
 - `assets/icon.png` — 1024×1024, opaque, no alpha channel (an alpha
   channel is the classic silent TestFlight rejection). Derived from the
   desktop app icon; Expo derives every other iOS size at build time.
-- `app.config.ts` — `icon`, the bundle ids (`io.github.naingthet.tidebreak`,
-  with `.staging` and `.dev` for the other variants), and export compliance
+- `app.config.ts` — `icon`, the bundle ids
+  (`io.github.naingthet.tidebreak.mobile`, with `.staging` and `.dev` for the
+  other variants, kept apart from the desktop app's identifier by
+  decision 103), and export compliance
   pre-answered (`ITSAppUsesNonExemptEncryption: false`). Only
   secure-store/web-browser ship, so no `NS*UsageDescription` strings are
   owed yet; add one alongside any permission-touching module.

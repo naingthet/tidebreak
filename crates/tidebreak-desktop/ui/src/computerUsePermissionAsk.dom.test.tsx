@@ -46,7 +46,7 @@ vi.mock("@tauri-apps/api/event", () => ({
 const missing: ComputerUsePermissionStatus = {
   status: "available",
   appName: "Tidebreak",
-  appIdentifier: "io.brightwave.tidebreak",
+  appIdentifier: "io.github.naingthet.tidebreak",
   accessibility: false,
   screenRecording: false,
 };

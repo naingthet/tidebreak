@@ -150,7 +150,12 @@ import { stillFollowing, updateCardFor, updateNoticeKey } from "./updateCard";
 import { UpdateReadyCard } from "./UpdateReadyCard";
 import { FloatingNotices } from "./FloatingNotices";
 import { UncleanExitNotice } from "./UncleanExitNotice";
-import { restartTidebreak, useUncleanExitNotice } from "./desktopLifecycle";
+import { DataMoveNotice } from "./DataMoveNotice";
+import {
+  restartTidebreak,
+  useDataMoveNotice,
+  useUncleanExitNotice,
+} from "./desktopLifecycle";
 import { rendererErrors } from "./rendererErrors";
 
 /**
@@ -322,6 +327,7 @@ export function AppShell() {
   const { confirm, decide, dialog: confirmDialog } = useConfirm();
   const desktopUpdates = useDesktopUpdates();
   const uncleanExit = useUncleanExitNotice();
+  const dataMove = useDataMoveNotice();
   const desktopNavigation = useDesktopNavigation();
   const zoom = useInterfaceZoom();
   const sidebarWidth = useUiStore((state) => state.sidebarWidth);
@@ -1516,6 +1522,12 @@ export function AppShell() {
             <ComputerUsePermissionNoticeHost
               onOpenSettings={() => void navigate({ to: PERMISSIONS_SETTINGS })}
             />
+            {dataMove.notice && (
+              <DataMoveNotice
+                move={dataMove.notice}
+                onDismiss={dataMove.dismiss}
+              />
+            )}
             {uncleanExit.notice && (
               <UncleanExitNotice
                 save={uncleanExit.save}

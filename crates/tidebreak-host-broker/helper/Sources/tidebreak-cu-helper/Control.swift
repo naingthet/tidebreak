@@ -69,6 +69,7 @@ enum Control {
     /// Bundle ids (exact, or as a dotted prefix) the helper will never act on.
     /// Mirrors the broker's blocklist — defense in depth, not the primary gate.
     static let blockedBundlePrefixes: [String] = [
+        "io.github.naingthet.tidebreak",
         "io.brightwave.tidebreak",
         "com.apple.loginwindow",
         "com.apple.SecurityAgent",

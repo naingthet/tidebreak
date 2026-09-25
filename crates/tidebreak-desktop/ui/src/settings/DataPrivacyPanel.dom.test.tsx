@@ -20,7 +20,8 @@ import {
 import { OUTBOUND_TRAFFIC } from "./dataPrivacy";
 
 const overview: DataOverview = {
-  data_dir: "/Users/alex/Library/Application Support/io.brightwave.tidebreak",
+  data_dir:
+    "/Users/alex/Library/Application Support/io.github.naingthet.tidebreak",
   storage: "sqlite",
   usage: [
     { category: "database", bytes: 12_582_912 },

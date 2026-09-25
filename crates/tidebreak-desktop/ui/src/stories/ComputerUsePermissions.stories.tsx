@@ -11,7 +11,7 @@ import { SettingsPanel } from "@/settings/primitives";
 const missing: ComputerUsePermissionStatus = {
   status: "available",
   appName: "Tidebreak",
-  appIdentifier: "io.brightwave.tidebreak",
+  appIdentifier: "io.github.naingthet.tidebreak",
   screenRecording: false,
   accessibility: false,
 };
@@ -139,7 +139,7 @@ export const LongAppName: Story = {
       ...missing,
       appName: "Tidebreak development and acceptance testing",
       appIdentifier:
-        "io.brightwave.tidebreak.wkacceptance.local-development-profile-for-native-computer-use",
+        "io.github.naingthet.tidebreak.wkacceptance.local-development-profile-for-native-computer-use",
     }),
   },
   play: async ({ canvasElement }) => {

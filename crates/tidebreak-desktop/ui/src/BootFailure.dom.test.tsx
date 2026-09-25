@@ -22,7 +22,7 @@ const openInBrowser = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("./openInBrowser", () => ({ openInBrowser }));
 
 const DATA_DIR =
-  "/Users/example/Library/Application Support/io.brightwave.tidebreak";
+  "/Users/example/Library/Application Support/io.github.naingthet.tidebreak";
 
 function localFailure(
   kind: BootFailureKind,
@@ -162,7 +162,7 @@ describe("BootFailure", () => {
       onRevealDataDir,
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Your conversations are still on disk at ~/Library/Application Support/io.brightwave.tidebreak.",
+      "Your conversations are still on disk at ~/Library/Application Support/io.github.naingthet.tidebreak.",
     );
     await user.click(screen.getByRole("button", { name: /Show/ }));
     expect(onRevealDataDir).toHaveBeenCalledOnce();
@@ -287,7 +287,7 @@ describe("bootFailureCopy", () => {
 
   it("writes the home folder as ~", () => {
     expect(displayDataDir(DATA_DIR)).toBe(
-      "~/Library/Application Support/io.brightwave.tidebreak",
+      "~/Library/Application Support/io.github.naingthet.tidebreak",
     );
     expect(displayDataDir("/home/example/.tidebreak")).toBe("~/.tidebreak");
     expect(displayDataDir("/var/lib/tidebreak")).toBe("/var/lib/tidebreak");

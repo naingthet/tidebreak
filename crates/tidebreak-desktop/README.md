@@ -57,11 +57,18 @@ Rust host boots the in-process API; the webview calls `server_info` to learn the
 base URL and token. The Tauri pre-dev command builds and stages the broker
 sidecar for the current target automatically.
 
-Debug builds run under the identifier `io.brightwave.tidebreak.dev` (instead of
-`io.brightwave.tidebreak`), so `cargo tauri dev` keeps its own single-instance
-lock and app-data directory and can run alongside an installed release build.
-Packaged staging builds use `io.brightwave.tidebreak.staging` and a blue icon
-for the same reason: staging, debug, and production do not share state.
+Debug builds run under the identifier `io.github.naingthet.tidebreak.dev`
+(instead of `io.github.naingthet.tidebreak`), so `cargo tauri dev` keeps its own
+single-instance lock and app-data directory and can run alongside an installed
+release build. Packaged staging builds use `io.github.naingthet.tidebreak.staging`
+and a blue icon for the same reason: staging, debug, and production do not share
+state.
+
+Builds before the identity changed ran as `io.brightwave.tidebreak` (and
+`.dev`, `.staging`). At launch, before it opens anything, the app moves that
+identity's data folder, webview storage, and keychain item to its own, so the
+first dev run after the change carries the old dev profile across. See
+[decision 103](../../docs/decisions/0103-tidebreak-runs-under-its-own-app-identity.md).
 
 Create an installable bundle. The before-build hook compiles the target-specific
 broker and the default Tauri configuration includes it automatically:

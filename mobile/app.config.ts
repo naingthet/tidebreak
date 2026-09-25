@@ -15,6 +15,15 @@ const SCHEME: Record<AppVariant, string> = {
   development: "tidebreak-dev",
 };
 
+// The app's identity on iOS and Android (decision 103). `.mobile` keeps it
+// apart from the desktop app's identifier, which a Mac running the iOS app
+// would otherwise share.
+const BUNDLE_ID: Record<AppVariant, string> = {
+  production: "io.github.naingthet.tidebreak.mobile",
+  staging: "io.github.naingthet.tidebreak.mobile.staging",
+  development: "io.github.naingthet.tidebreak.mobile.dev",
+};
+
 // Printed by `eas init` for the Expo project that ships this app (see
 // DEPLOYING.md); eas-cli cannot write into a dynamic (TS) config, so the id is
 // pasted here by hand. While it is empty, the EAS/updates fields are omitted
@@ -59,12 +68,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     : {}),
   ios: {
     supportsTablet: true,
-    bundleIdentifier:
-      VARIANT === "production"
-        ? "io.github.naingthet.tidebreak"
-        : VARIANT === "staging"
-          ? "io.github.naingthet.tidebreak.staging"
-          : "io.github.naingthet.tidebreak.dev",
+    bundleIdentifier: BUNDLE_ID[VARIANT],
     infoPlist: {
       // Pre-answers export compliance; the app uses only HTTPS-exempt
       // encryption. Without this every TestFlight build waits on the
@@ -73,12 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    package:
-      VARIANT === "production"
-        ? "io.github.naingthet.tidebreak"
-        : VARIANT === "staging"
-          ? "io.github.naingthet.tidebreak.staging"
-          : "io.github.naingthet.tidebreak.dev",
+    package: BUNDLE_ID[VARIANT],
     adaptiveIcon: {
       backgroundColor: "#F7F8FA",
     },
