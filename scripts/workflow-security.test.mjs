@@ -2382,8 +2382,9 @@ test("universal macOS release packages contain both slices", () => {
   }
 });
 
-// The computer-use helper's signing identifier, derived from the app identity.
-const CU_HELPER_IDENTIFIER = "io.brightwave.tidebreak.cu-helper";
+// The computer-use helper's signing identifier, derived from the app identity,
+// so the helper always signs under the identity the app itself ships with.
+const CU_HELPER_IDENTIFIER = `${tauriConfig.identifier}.cu-helper`;
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 test("macOS computer-use helper survives packaging and is signed before bundling", () => {
