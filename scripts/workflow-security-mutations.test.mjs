@@ -448,6 +448,33 @@ const mutations = [
       ),
   },
   {
+    name: "release uploads unverified updater signatures",
+    file: ".github/workflows/release.yml",
+    expected: "GitHub release assets are attached before immutable publication",
+    mutate: (source) =>
+      source.replace(
+        "          node scripts/verify-updater-signatures.mjs \\\n            --config crates/tidebreak-desktop/tauri.conf.json \\\n            downloads\n",
+        "",
+      ),
+  },
+  {
+    name: "voice helper publishes unverified signatures",
+    file: ".github/workflows/publish-whisper-helper.yml",
+    expected: "production secrets remain isolated",
+    mutate: (source) =>
+      source.replace(
+        /      - name: Verify every helper signature against the updater key\n[\s\S]*?(?=\n      # `gh release create`)/,
+        "",
+      ),
+  },
+  {
+    name: "a disabled image workflow fails a public release",
+    file: ".github/workflows/release.yml",
+    expected: "publishing a release dispatches the server image build",
+    mutate: (source) =>
+      source.replace("          if ! gh workflow run publish-server-image.yml \\\n", "          gh workflow run publish-server-image.yml \\\n"),
+  },
+  {
     name: "signing job pnpm pin",
     file: ".github/workflows/release.yml",
     expected: "signing jobs run installers before loading signing material",

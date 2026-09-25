@@ -460,8 +460,9 @@ it. A partial set fails the release rather than quietly falling back.
 | `APPLE_API_ISSUER`           | variable | App Store Connect API issuer UUID              |
 
 An ad-hoc signed app is not notarized, so macOS blocks it the first time it
-opens. macOS also ties Accessibility and Screen Recording grants to the exact
-ad-hoc build, so people may need to grant them again after each update.
+opens. macOS also ties Accessibility and Screen Recording grants and keychain
+access to the exact ad-hoc build, so people may need to grant them again after
+each update.
 
 The workflow references Apple secrets only in the macOS job. Windows and Linux
 receive only the Tauri updater key in their artifact verification steps, and

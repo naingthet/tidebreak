@@ -2188,6 +2188,13 @@ jobs:
             exit 1
           }
 
+          # Every updater signature must verify against the public key that
+          # installed apps trust. A release signed with any other key would
+          # publish updates that every installed app rejects.
+          node scripts/verify-updater-signatures.mjs \
+            --config crates/tidebreak-desktop/tauri.conf.json \
+            downloads
+
       # Attest only what this run built: the packages, signatures, checksums,
       # manifests, and SBOM under dist. Version-free copies share their bytes
       # with a versioned file, and carried-forward downloads keep the
@@ -2305,7 +2312,7 @@ jobs:
               note="$(cat <<'NOTE'
           ## Opening the macOS build
 
-          This macOS build is ad-hoc signed and not notarized by Apple, so macOS blocks it the first time you open it. To open it, choose **Open Anyway** in System Settings > Privacy & Security, or run `xattr -dr com.apple.quarantine /Applications/Tidebreak.app` in Terminal. macOS may ask you to grant Accessibility and Screen Recording again after each update.
+          This macOS build is ad-hoc signed and not notarized by Apple, so macOS blocks it the first time you open it. To open it, choose **Open Anyway** in System Settings > Privacy & Security, or run `xattr -dr com.apple.quarantine /Applications/Tidebreak.app` in Terminal. Each update carries a new ad-hoc signature, so macOS may ask you again to grant Accessibility and Screen Recording and to allow keychain access.
           NOTE
               )"
             elif [[ "$MACOS_SIGNING" != developer-id ]]; then
@@ -2354,8 +2361,12 @@ jobs:
           # one of the two exceptions to that rule, so dispatch it explicitly.
           # The release trigger stays declared for a release someone publishes
           # by hand in the UI, which carries a user token and does fire.
-          gh workflow run publish-server-image.yml \
-            --repo "$GITHUB_REPOSITORY" --ref main --field "release_tag=$RELEASE_TAG"
+          # The release is already public here, so a disabled image workflow
+          # warns instead of failing the run or skipping the draft refresh.
+          if ! gh workflow run publish-server-image.yml \
+            --repo "$GITHUB_REPOSITORY" --ref main --field "release_tag=$RELEASE_TAG"; then
+            echo "::warning::Could not start Publish server image for $RELEASE_TAG. Enable that workflow, then run it with release_tag=$RELEASE_TAG."
+          fi
 
       - name: Refresh the next release draft
         if: ${{ needs.validate.outputs.draft == 'true' }}
@@ -2366,4 +2377,6 @@ jobs:
           # during the build, Release Drafter already created one while the
           # release was a prerelease; this call is idempotent and just ensures
           # a draft exists even when the build was quiet.
-          gh workflow run release-draft.yml --repo "$GITHUB_REPOSITORY" --ref main --field update-draft=true
+          if ! gh workflow run release-draft.yml --repo "$GITHUB_REPOSITORY" --ref main --field update-draft=true; then
+            echo "::warning::Could not start Release draft. Enable that workflow; the next push to main refreshes the draft too."
+          fi

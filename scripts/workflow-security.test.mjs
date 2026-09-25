@@ -381,6 +381,11 @@ test("publishing a release dispatches the server image build", () => {
     /if: \$\{\{ needs\.validate\.outputs\.draft == 'true' \}\}/,
   );
 
+  // The release is public by the time these run, so a disabled workflow warns
+  // instead of failing the run and skipping the draft refresh.
+  assert.match(finalizeJob, /if ! gh workflow run publish-server-image\.yml/);
+  assert.match(finalizeJob, /if ! gh workflow run release-draft\.yml/);
+
   // The declared trigger stays for a release published by hand in the UI.
   assert.match(
     workflows["publish-server-image.yml"],
@@ -967,6 +972,18 @@ test("production secrets remain isolated to the release workflow", () => {
       /gh release create "\$HELPER_TAG" dist\/\* \\\n[\s\S]*?--prerelease\n/,
     );
     assert.doesNotMatch(whisperPublish, /--latest\b/);
+    // The desktop trusts only the updater key, so a helper signed with any
+    // other key must stop here rather than publish.
+    assert.match(
+      whisperPublish,
+      /node scripts\/verify-updater-signatures\.mjs\n\s+--config crates\/tidebreak-desktop\/tauri\.conf\.json\n\s+dist\n/,
+    );
+    const helperVerifyAt = whisperPublish.indexOf("node scripts/verify-updater-signatures.mjs");
+    assert.ok(
+      whisperPublish.indexOf("tauri signer sign") < helperVerifyAt &&
+        helperVerifyAt < whisperPublish.indexOf('gh release create "$HELPER_TAG"'),
+      "helper signatures must verify after signing and before publication",
+    );
   }
 
   // The mobile deploy needs a paid Expo account, so it runs only when someone
@@ -2192,6 +2209,18 @@ test("GitHub release assets are attached before immutable publication", () => {
     createAt !== -1 && createAt < prepareAt && prepareAt < verifyAt && verifyAt < uploadAt,
     "manifests are created, gathered, and verified before any upload",
   );
+  // Every updater signature must verify against the public key installed
+  // apps trust before anything is attached; a release signed with another
+  // key would publish updates that every installed app rejects.
+  assert.match(
+    attachJob,
+    /node scripts\/verify-updater-signatures\.mjs \\\n\s+--config crates\/tidebreak-desktop\/tauri\.conf\.json \\\n\s+downloads\n/,
+  );
+  const signaturesAt = attachJob.indexOf("node scripts/verify-updater-signatures.mjs");
+  assert.ok(
+    verifyAt < signaturesAt && signaturesAt < uploadAt,
+    "updater signatures must verify before any upload",
+  );
 
   assert.match(attachJob, /name: tidebreak-macos-universal-/);
   assert.match(attachJob, /name: tidebreak-windows-x86_64-/);
@@ -2970,5 +2999,6 @@ test("Apple signing is optional, and an ad-hoc macOS release says so", () => {
   assert.match(finalize, /if \[\[ "\$MACOS_SIGNING" = adhoc \]\]; then/);
   assert.match(finalize, /ad-hoc signed and not notarized by Apple/);
   assert.match(finalize, /Open Anyway/);
+  assert.match(finalize, /allow keychain access/);
   assert.match(finalize, /The macOS build reported no signing mode/);
 });

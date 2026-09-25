@@ -242,6 +242,14 @@ jobs:
             }
           done < <(find dist -type f ! -name '*.sig' -print0)
 
+      # The desktop checks each helper against the updater public key before
+      # it runs; a helper signed with any other key would never install.
+      - name: Verify every helper signature against the updater key
+        run: >-
+          node scripts/verify-updater-signatures.mjs
+          --config crates/tidebreak-desktop/tauri.conf.json
+          dist
+
       # `gh release create` uploads every file before it publishes the
       # release, so nobody can download a partial helper set.
       - name: Publish the helper release
