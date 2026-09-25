@@ -55,7 +55,7 @@ into its data directory; the CLI may attach by reading that file.**
    that already have the pair.
 
 5. **Desktop attach UX.** Point `OPENWAVE_DATA_DIR` at the desktop profile
-   (debug: `…/io.brightwave.openwave.dev`; release: `…/io.brightwave.openwave`)
+   (the debug or the release profile under the app's data folder)
    and run with `--attach`. No new transport, no UI “copy token” requirement.
 
 ## Alternatives Considered

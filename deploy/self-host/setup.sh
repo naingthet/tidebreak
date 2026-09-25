@@ -18,7 +18,7 @@ umask 077
 
 # The server's image runs as this uid (deploy/self-host/Dockerfile).
 server_uid=10001
-repository=brightwave-inc/tidebreak
+repository=naingthet/tidebreak
 # The first release that can keep blobs on local disk, which
 # docker-compose.yml does by default. An older server refuses to start with
 # that setting.

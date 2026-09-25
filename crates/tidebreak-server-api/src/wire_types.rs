@@ -1507,7 +1507,7 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // REST records (brightwave-inc/tidebreak#3005): the response types the
+    // REST records: the response types the
     // CLI reads over HTTP, fixtured the same way as the chat frames.
     // ------------------------------------------------------------------
 

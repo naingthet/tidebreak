@@ -742,7 +742,7 @@ fn flag_from_managed_plist(bytes: &[u8], key: &str) -> Result<Option<bool>> {
 }
 
 /// Machine policy from the Windows registry:
-/// `HKLM\Software\Policies\Brightwave\Tidebreak`, value `GatewayURL` — the key
+/// `HKLM\Software\Policies\Tidebreak`, value `GatewayURL` — the key
 /// GPO/Intune administrative templates deploy to. Registry access has no
 /// portable seam, so only the value check ([`asserted_gateway_url`]) is
 /// unit-tested and this reader stays a thin shell over `winreg`.
@@ -758,7 +758,7 @@ fn registry_policy_value(name: &str) -> Result<Option<String>> {
     // redirected to Wow6432Node.
     let key = match winreg::RegKey::predef(winreg::enums::HKEY_LOCAL_MACHINE)
         .open_subkey_with_flags(
-            r"Software\Policies\Brightwave\Tidebreak",
+            r"Software\Policies\Tidebreak",
             winreg::enums::KEY_READ | winreg::enums::KEY_WOW64_64KEY,
         ) {
         Ok(key) => key,

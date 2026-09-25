@@ -24,7 +24,7 @@ const document: WorkspaceConfigDocument = {
     code_repositories: [
       {
         display_name: "tidebreak",
-        origin_url: "https://github.com/brightwave-inc/tidebreak.git",
+        origin_url: "https://github.com/octo-org/tidebreak.git",
         root_path: "/Users/alex/src/tidebreak",
         default_base_ref: "main",
         branch_prefix: "tidebreak/",
@@ -145,7 +145,7 @@ describe("PortableConfigSection", () => {
       entries: [
         {
           section: "code_repositories",
-          key: "https://github.com/brightwave-inc/tidebreak.git",
+          key: "https://github.com/octo-org/tidebreak.git",
           status: "new",
           differing_fields: [],
           remap_fields: [],
@@ -185,7 +185,7 @@ describe("PortableConfigSection", () => {
     const repo = within(row("tidebreak"));
     expect(repo.getByText("/Users/alex/src/tidebreak")).toBeVisible();
     expect(
-      repo.getByText("https://github.com/brightwave-inc/tidebreak.git"),
+      repo.getByText("https://github.com/octo-org/tidebreak.git"),
     ).toBeVisible();
     expect(repo.getByText("pnpm install")).toBeVisible();
   });
@@ -196,7 +196,7 @@ describe("PortableConfigSection", () => {
       entries: [
         {
           section: "code_repositories",
-          key: "https://github.com/brightwave-inc/tidebreak.git",
+          key: "https://github.com/octo-org/tidebreak.git",
           status: "needs_remap",
           differing_fields: [],
           remap_fields: ["root_path"],
@@ -231,7 +231,7 @@ describe("PortableConfigSection", () => {
       (decision) => [decision.key, decision.action],
     );
     expect(actions).toEqual([
-      ["https://github.com/brightwave-inc/tidebreak.git", "skip"],
+      ["https://github.com/octo-org/tidebreak.git", "skip"],
       ["docs", "skip"],
       ["search", "add"],
     ]);
@@ -243,7 +243,7 @@ describe("PortableConfigSection", () => {
       entries: [
         {
           section: "code_repositories",
-          key: "https://github.com/brightwave-inc/tidebreak.git",
+          key: "https://github.com/octo-org/tidebreak.git",
           status: "needs_remap",
           differing_fields: [],
           remap_fields: ["root_path"],
@@ -265,7 +265,7 @@ describe("PortableConfigSection", () => {
 
     await user.type(
       screen.getByLabelText(
-        "Remap root_path for https://github.com/brightwave-inc/tidebreak.git",
+        "Remap root_path for https://github.com/octo-org/tidebreak.git",
       ),
       "/Users/me/src/tidebreak",
     );

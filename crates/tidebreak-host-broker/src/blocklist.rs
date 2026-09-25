@@ -112,10 +112,15 @@ mod tests {
         }
     }
 
+    /// Tidebreak's own bundle identifier. The lookalikes below are derived
+    /// from it, so they follow the identity wherever it moves.
+    const OWN_BUNDLE: &str = "io.brightwave.tidebreak";
+
     #[test]
     fn separate_products_and_isolated_development_targets_are_available() {
+        let sibling_product = OWN_BUNDLE.replace(".tidebreak", ".another-product");
         for bundle_id in [
-            "io.brightwave.another-product",
+            sibling_product.as_str(),
             "dev.tidebreak.fixture",
             "dev.tidebreak.desktop-test",
             "com.apple.Notes",
@@ -127,10 +132,11 @@ mod tests {
 
     #[test]
     fn bundle_matching_does_not_classify_lookalike_names() {
+        let lookalike_vendor = OWN_BUNDLE.replacen(".tidebreak", "x.tidebreak", 1);
         for bundle_id in [
             "xcom.apple.SecurityAgent",
             "com.apple.SecurityAgentish",
-            "io.brightwavex.tidebreak",
+            lookalike_vendor.as_str(),
             "com.apple.Terminalized",
             "com.jetbrainsx.intellij",
             "",

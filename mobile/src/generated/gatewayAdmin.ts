@@ -8565,7 +8565,7 @@ export interface components {
             /**
              * @description That binding's label, as shown on the account page. Null when the
              *     binding has since been deleted or none was involved.
-             * @example thet@brightwave.io
+             * @example person@example.com
              */
             subscription_label?: string | null;
             /**

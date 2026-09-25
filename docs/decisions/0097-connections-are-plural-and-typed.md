@@ -5,7 +5,7 @@
 - Owners: mobile
 - Related: [`0072-mobile-client.md`](0072-mobile-client.md) (amended by this
   record), [`0049-gateway-authenticated-hosted-machines.md`](0049-gateway-authenticated-hosted-machines.md),
-  mg ADR 0060, GitHub epic #3398, brightwave-inc/model-gateway#2044
+  mg ADR 0060, GitHub epic #3398, and the gateway change that widens the client
 - Supersedes: none
 
 ## Context
@@ -26,7 +26,7 @@ Two facts about the gateway bound what the app may do today.
 Its `tidebreak-mobile` OAuth client is confined to the `control` and
 `tidebreak:*` resources, and is registered as not control-plane capable
 (`REGISTERED_CLIENTS`, `crates/server/src/cli_auth.rs`).
-brightwave-inc/model-gateway#2044 widens it; until that is deployed, the
+A gateway change widens it; until that is deployed, the
 authorize page refuses a `control_plane:*` scope from this client outright —
 not the console surface, the whole sign-in — and the token endpoint refuses a
 console resource with HTTP 400 `invalid_resource`.
@@ -121,7 +121,7 @@ client may hold console resources".
   Widening authority always costs a re-authentication; nothing upgrades in
   place.
 - That advertisement does not exist yet. The gateway half of the epic
-  (brightwave-inc/model-gateway#2044) must add it alongside the widened client,
+  must add it alongside the widened client,
   or the app's console scopes stay unrequested no matter how the client is
   registered.
 - An install that upgrades into this model is migrated rather than wiped,

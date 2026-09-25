@@ -726,7 +726,7 @@ describe("CodeHome for a returning reader", () => {
 
   it("keeps the whole repository path and its tail intact for middle truncation", async () => {
     const path =
-      "/Users/sam/src/brightwave/product-foundations/design-system-components";
+      "/Users/sam/src/workspaces/product-foundations/design-system-components";
     await renderReturning({
       listCodeRepos: vi.fn(async () => [{ ...REPO, root_path: path }]),
     });

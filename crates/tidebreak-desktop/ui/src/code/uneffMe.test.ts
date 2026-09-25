@@ -105,7 +105,7 @@ describe("tidebreak product repo", () => {
     expect(
       isTidebreakProductRepo({
         ...APP,
-        display_name: "brightwave-inc/tidebreak",
+        display_name: "naingthet/tidebreak",
         root_path: "/tmp/clone",
       }),
     ).toBe(true);

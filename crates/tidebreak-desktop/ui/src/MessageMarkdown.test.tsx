@@ -60,8 +60,8 @@ describe("citation directives", () => {
 
 describe("safeMarkdownUrl", () => {
   it("permits http and https, and rejects executable or local schemes", () => {
-    expect(safeMarkdownUrl("https://tidebreak.io/docs")).toBe(
-      "https://tidebreak.io/docs",
+    expect(safeMarkdownUrl("https://naingthet.github.io/tidebreak/docs")).toBe(
+      "https://naingthet.github.io/tidebreak/docs",
     );
     expect(safeMarkdownUrl("http://127.0.0.1:6031/?path=/story/card")).toBe(
       "http://127.0.0.1:6031/?path=/story/card",
@@ -72,7 +72,7 @@ describe("safeMarkdownUrl", () => {
       safeMarkdownUrl("file:///Users/example/private.txt"),
     ).toBeUndefined();
     expect(
-      safeMarkdownUrl("https://user:secret@tidebreak.io/docs"),
+      safeMarkdownUrl("https://user:secret@naingthet.github.io/tidebreak/docs"),
     ).toBeUndefined();
   });
 });
@@ -115,7 +115,7 @@ describe("MessageMarkdown", () => {
     const markup = renderToStaticMarkup(
       <MessageMarkdown>
         {
-          '## Heading\n\n- `inline` item\n\n> A quote\n\n[Docs](https://tidebreak.io/docs) [Unsafe](javascript:alert(1))\n\n![remote](https://example.com/image.png)\n\n<iframe src="https://example.com"></iframe>'
+          '## Heading\n\n- `inline` item\n\n> A quote\n\n[Docs](https://naingthet.github.io/tidebreak/docs) [Unsafe](javascript:alert(1))\n\n![remote](https://example.com/image.png)\n\n<iframe src="https://example.com"></iframe>'
         }
       </MessageMarkdown>,
     );
@@ -123,7 +123,9 @@ describe("MessageMarkdown", () => {
     expect(markup).toContain("<h2>Heading</h2>");
     expect(markup).toContain("<code>inline</code>");
     expect(markup).toContain("<blockquote>");
-    expect(markup).toContain('href="https://tidebreak.io/docs"');
+    expect(markup).toContain(
+      'href="https://naingthet.github.io/tidebreak/docs"',
+    );
     expect(markup).toContain("Image omitted: remote");
     expect(markup).not.toContain("<img");
     expect(markup).not.toContain("<iframe");

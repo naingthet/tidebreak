@@ -191,7 +191,7 @@ function browserSession(
     history: url
       ? [
           {
-            url: "https://github.com/brightwave-inc/tidebreak/pull/2335",
+            url: "https://github.com/octo-org/tidebreak/pull/2335",
             title: "Agent browser epic",
           },
           { url, title: "Browser review — Tidebreak" },

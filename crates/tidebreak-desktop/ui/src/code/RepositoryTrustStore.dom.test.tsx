@@ -18,7 +18,7 @@ afterEach(() => {
 const workspace = {
   id: "workspace-1",
   worktree_path: "/Users/mara/Tidebreak/workspaces/tidebreak/fix-1",
-  repo_display_name: "brightwave-inc/tidebreak",
+  repo_display_name: "octo-org/tidebreak",
 };
 
 const hooks: CodeRepoTrustSnapshot = {

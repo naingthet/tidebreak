@@ -26,8 +26,8 @@ signed in, one click from the machine.
 The renderer that would serve them already exists. The desktop UI is a React
 bundle the packaged app loads over Tauri's own protocol; every attachment
 state a browser tab could be in is one the app already renders, including the
-remote attachment with host authority struck through ([PR
-#2514](https://github.com/brightwave-inc/tidebreak/pull/2514) made
+remote attachment with host authority struck through (PR
+#2514 made
 `attachedRemotely` the signal for that).
 
 ## Decision

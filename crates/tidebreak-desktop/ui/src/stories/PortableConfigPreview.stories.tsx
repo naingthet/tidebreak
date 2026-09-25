@@ -14,7 +14,7 @@ const document: WorkspaceConfigDocument = {
     code_repositories: [
       {
         display_name: "tidebreak",
-        origin_url: "https://github.com/brightwave-inc/tidebreak.git",
+        origin_url: "https://github.com/octo-org/tidebreak.git",
         root_path: "/Users/alex/src/tidebreak",
         default_base_ref: "main",
         branch_prefix: "tidebreak/",
@@ -73,7 +73,7 @@ const document: WorkspaceConfigDocument = {
   },
 };
 
-const repoKey = "https://github.com/brightwave-inc/tidebreak.git";
+const repoKey = "https://github.com/octo-org/tidebreak.git";
 
 function previewClient(entries: WorkspaceConfigPreviewEntry[]) {
   return {

@@ -11,9 +11,9 @@ exclude = ["crates/tidebreak-whisper", "vendor/*"]
 version = "0.0.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/brightwave-inc/tidebreak"
-homepage = "https://www.tidebreak.io"
-authors = ["Brightwave, Inc."]
+repository = "https://github.com/naingthet/tidebreak"
+homepage = "https://naingthet.github.io/tidebreak/docs/"
+authors = ["Tidebreak contributors"]
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

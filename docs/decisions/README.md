@@ -1,5 +1,10 @@
 # Decision records
 
+> Most records here were written by the project's original maintainers (see
+> [`NOTICE`](../../NOTICE)) before it moved to
+> [github.com/naingthet/tidebreak](https://github.com/naingthet/tidebreak).
+> They keep their original wording apart from company names.
+
 Numbered records of decisions that later work has to live with. Each states
 what was chosen, what was rejected, and what would cause it to be revisited.
 

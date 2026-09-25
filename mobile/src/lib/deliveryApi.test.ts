@@ -14,10 +14,10 @@ import {
 
 const repository = {
   host: "github.com",
-  owner: "brightwave-inc",
+  owner: "octo-org",
   name: "tidebreak",
-  name_with_owner: "brightwave-inc/tidebreak",
-  url: "https://github.com/brightwave-inc/tidebreak",
+  name_with_owner: "octo-org/tidebreak",
+  url: "https://github.com/octo-org/tidebreak",
   default_branch: "main",
   tidebreak_repo_id: "repo-1",
 };
@@ -30,10 +30,10 @@ const capability = {
 };
 
 const pullRequest = {
-  id: "github.com/brightwave-inc/tidebreak#2852",
+  id: "github.com/octo-org/tidebreak#2852",
   repository,
   number: 2852,
-  url: "https://github.com/brightwave-inc/tidebreak/pull/2852",
+  url: "https://github.com/octo-org/tidebreak/pull/2852",
   title: "Browse and message chats",
   state: "open",
   draft: false,
@@ -69,7 +69,7 @@ const pullRequestsPage = {
     {
       repository: {
         host: "github.com",
-        owner: "brightwave-inc",
+        owner: "octo-org",
         name: "model-gateway",
       },
       kind: "rate_limited",
@@ -102,10 +102,10 @@ describe("mobile Delivery API contracts", () => {
       repositories: [
         {
           host: "github.com",
-          owner: "brightwave-inc",
+          owner: "octo-org",
           name: "tidebreak",
-          name_with_owner: "brightwave-inc/tidebreak",
-          url: "https://github.com/brightwave-inc/tidebreak",
+          name_with_owner: "octo-org/tidebreak",
+          url: "https://github.com/octo-org/tidebreak",
         },
       ],
       errors: [],
@@ -149,7 +149,7 @@ describe("mobile Delivery API contracts", () => {
     await expect(
       queryMobileDeliveryPullRequests(queried.client, {
         repositories: [
-          { host: "github.com", owner: "brightwave-inc", name: "tidebreak" },
+          { host: "github.com", owner: "octo-org", name: "tidebreak" },
         ],
         cursor: "page-2",
         refresh: false,
@@ -163,7 +163,7 @@ describe("mobile Delivery API contracts", () => {
           repositories: [
             {
               host: "github.com",
-              owner: "brightwave-inc",
+              owner: "octo-org",
               name: "tidebreak",
             },
           ],
@@ -183,7 +183,7 @@ describe("mobile Delivery API contracts", () => {
 
     await queryMobileDeliveryPullRequests(queried.client, {
       repositories: [
-        { host: "github.com", owner: "brightwave-inc", name: "tidebreak" },
+        { host: "github.com", owner: "octo-org", name: "tidebreak" },
       ],
       authors: ["naingthet"],
       refresh: true,
@@ -208,7 +208,7 @@ describe("mobile Delivery API contracts", () => {
     await expect(
       queryMobileDeliveryPullRequests(invalidRefresh.client, {
         repositories: [
-          { host: "github.com", owner: "brightwave-inc", name: "tidebreak" },
+          { host: "github.com", owner: "octo-org", name: "tidebreak" },
         ],
         cursor: "page-2",
         refresh: true,
@@ -227,16 +227,16 @@ describe("mobile Delivery API contracts", () => {
       },
       items: [
         {
-          id: "github.com/brightwave-inc/tidebreak#2852",
+          id: "github.com/octo-org/tidebreak#2852",
           repository: {
             host: "github.com",
-            owner: "brightwave-inc",
+            owner: "octo-org",
             name: "tidebreak",
-            name_with_owner: "brightwave-inc/tidebreak",
-            url: "https://github.com/brightwave-inc/tidebreak",
+            name_with_owner: "octo-org/tidebreak",
+            url: "https://github.com/octo-org/tidebreak",
           },
           number: 2852,
-          url: "https://github.com/brightwave-inc/tidebreak/pull/2852",
+          url: "https://github.com/octo-org/tidebreak/pull/2852",
           title: "Browse and message chats",
           draft: false,
           author: "naingthet",
@@ -257,7 +257,7 @@ describe("mobile Delivery API contracts", () => {
         {
           repository: {
             host: "github.com",
-            owner: "brightwave-inc",
+            owner: "octo-org",
             name: "model-gateway",
           },
           kind: "rate_limited",

@@ -86,7 +86,7 @@ pub use crate::server_version::{
     compatibility, Compatibility, ServerVersion, API_LEVEL, MIN_API_LEVEL,
 };
 
-// REST records (brightwave-inc/tidebreak#3005). One block per route family.
+// REST records. One block per route family.
 pub use crate::mcp_config::{McpHealth, McpServerDefinition, McpServerInfo, McpServersInfo};
 pub use crate::mcp_curated::McpCuration;
 pub use crate::model_registry::{InputModality, VerificationTier};

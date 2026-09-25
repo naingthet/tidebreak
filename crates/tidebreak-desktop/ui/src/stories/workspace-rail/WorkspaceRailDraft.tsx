@@ -92,7 +92,7 @@ export function WorkspaceRailDraft({
                   ...entry,
                   workspace: {
                     ...entry.workspace,
-                    repo_display_name: `brightwave-inc/${railRepositories.find((repo) => repo.id === entry.workspace.repo_id)?.display_name}`,
+                    repo_display_name: `octo-org/${railRepositories.find((repo) => repo.id === entry.workspace.repo_id)?.display_name}`,
                   },
                 }
               : scenario === "long-names"

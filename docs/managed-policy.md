@@ -67,7 +67,7 @@ consulted — only MDM-forced values count.
 
 Deploy (GPO or Intune) a machine-scoped registry value:
 
-- Key: `HKLM\Software\Policies\Brightwave\Tidebreak`
+- Key: `HKLM\Software\Policies\Tidebreak`
 - Value: `GatewayURL` (`REG_SZ`)
 - Value: `AllowLocalMcpServers` (`REG_SZ`, optional; `true` or `false`)
 - Value: `DownloadUpdatesAutomatically` (`REG_SZ`, optional; `true` or

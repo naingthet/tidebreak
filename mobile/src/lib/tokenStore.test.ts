@@ -97,7 +97,7 @@ describe("TokenStore", () => {
     // A gateway whose tidebreak-mobile client is not widened yet answers the
     // console resources with 400 invalid_resource — the same status a revoked
     // family uses. Reading that as a sign-out would throw the user out of a
-    // working machine session (brightwave-inc/model-gateway#2044).
+    // working machine session.
     const http: TokenHttp = {
       postForm: vi.fn(async (_url, body) =>
         body.resource === "control_plane"

@@ -44,7 +44,7 @@ const E2B_SANDBOX_BASE: &str = "https://sandbox.e2b.app";
 /// line so the publish workflow can rewrite both together —
 /// `tidebreak-documents-main-20260924-3253a4d-r1518`
 /// resolves to. It is currently built from
-/// `ghcr.io/brightwave-inc/tidebreak-sandbox-agent-documents:main-20260924-3253a4d-r1518`
+/// `ghcr.io/naingthet/tidebreak-sandbox-agent-documents:main-20260924-3253a4d-r1518`
 /// (`sha256:c657e5599ac734856c2e912e74b94227d3e196ce8765ce800056713fbe236c62`),
 /// the same ref recorded in `crates/tidebreak-sandbox-agent/e2b/e2b.Dockerfile`.
 /// Publishing a new image version publishes a new alias with a new ID, and the

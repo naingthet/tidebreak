@@ -10,10 +10,10 @@ function repository(
 ): CodeGitHubRepositoryRef {
   return {
     host: "github.com",
-    owner: "brightwave-inc",
+    owner: "octo-org",
     name,
-    name_with_owner: `brightwave-inc/${name}`,
-    url: `https://github.com/brightwave-inc/${name}`,
+    name_with_owner: `octo-org/${name}`,
+    url: `https://github.com/octo-org/${name}`,
     ...(tidebreakRepoId ? { tidebreak_repo_id: tidebreakRepoId } : {}),
   };
 }
@@ -79,16 +79,16 @@ describe("triggersForNotificationRules", () => {
     const armed = triggersForNotificationRules(
       [
         rule("run_failure", {
-          repositoryKeys: ["github.com/brightwave-inc/orca"],
+          repositoryKeys: ["github.com/octo-org/orca"],
         }),
       ],
       [
         {
           host: "GitHub.com",
-          owner: "BrightWave-Inc",
+          owner: "Octo-Org",
           name: "Orca",
-          name_with_owner: "BrightWave-Inc/Orca",
-          url: "https://github.com/BrightWave-Inc/Orca",
+          name_with_owner: "Octo-Org/Orca",
+          url: "https://github.com/Octo-Org/Orca",
           tidebreak_repo_id: "repo-2",
         },
       ],
@@ -102,7 +102,7 @@ describe("triggersForNotificationRules", () => {
     const armed = triggersForNotificationRules(
       [
         rule("run_failure", {
-          repositoryKeys: ["github.com/brightwave-inc/orca"],
+          repositoryKeys: ["github.com/octo-org/orca"],
         }),
       ],
       [repository("tidebreak", "repo-1"), repository("orca", "repo-2")],

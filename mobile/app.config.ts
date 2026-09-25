@@ -15,11 +15,12 @@ const SCHEME: Record<AppVariant, string> = {
   development: "tidebreak-dev",
 };
 
-// Printed by `eas init` (project @brightwave/tidebreak-mobile); eas-cli cannot
-// write into a dynamic (TS) config, so the id is pasted here by hand. If it is
-// ever emptied, the EAS/updates fields are omitted entirely — a placeholder
-// value makes `eas init` believe the project is already linked and fail.
-const EAS_PROJECT_ID = "af9811ba-f747-44e9-b5cd-c1fe33b4c6e9";
+// Printed by `eas init` for the Expo project that ships this app (see
+// DEPLOYING.md); eas-cli cannot write into a dynamic (TS) config, so the id is
+// pasted here by hand. While it is empty, the EAS/updates fields are omitted
+// entirely — a placeholder value makes `eas init` believe the project is
+// already linked and fail.
+const EAS_PROJECT_ID = "";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -30,7 +31,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         ? "Tidebreak Staging"
         : "Tidebreak Dev",
   slug: "tidebreak-mobile",
-  owner: "brightwave",
   version: "0.1.0",
   orientation: "portrait",
   scheme: SCHEME[VARIANT],
@@ -59,13 +59,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     : {}),
   ios: {
     supportsTablet: true,
-    appleTeamId: "CUURNS78Y4",
     bundleIdentifier:
       VARIANT === "production"
-        ? "inc.brightwave.tidebreak"
+        ? "io.github.naingthet.tidebreak"
         : VARIANT === "staging"
-          ? "inc.brightwave.tidebreak.staging"
-          : "inc.brightwave.tidebreak.dev",
+          ? "io.github.naingthet.tidebreak.staging"
+          : "io.github.naingthet.tidebreak.dev",
     infoPlist: {
       // Pre-answers export compliance; the app uses only HTTPS-exempt
       // encryption. Without this every TestFlight build waits on the
@@ -76,10 +75,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package:
       VARIANT === "production"
-        ? "inc.brightwave.tidebreak"
+        ? "io.github.naingthet.tidebreak"
         : VARIANT === "staging"
-          ? "inc.brightwave.tidebreak.staging"
-          : "inc.brightwave.tidebreak.dev",
+          ? "io.github.naingthet.tidebreak.staging"
+          : "io.github.naingthet.tidebreak.dev",
     adaptiveIcon: {
       backgroundColor: "#F7F8FA",
     },

@@ -10,15 +10,27 @@ Tidebreak requires **macOS 13 Ventura or later**. Computer use needs
 
 Download the disk image and drag Tidebreak to Applications.
 
-[Download for macOS](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-macos-universal.dmg)
+[Download for macOS](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-macos-universal.dmg)
 
 Releases ship one universal build for Apple Silicon and Intel Macs. An
 Apple-Silicon-only compatibility asset is also attached to the GitHub release,
 but the universal disk image is the normal download.
 
-The macOS app is signed and notarized, so it opens without a Gatekeeper
-override. Each download has a `.sha256` sidecar on the same release if you want
-to check it:
+A release built with an Apple Developer ID is signed and notarized, so it opens
+without a Gatekeeper override. A release built without one is ad-hoc signed and
+not notarized, and its release notes say so. macOS blocks such a build the first
+time you open it. To open it, choose **Open Anyway** in **System Settings →
+Privacy & Security**, or run this in Terminal:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Tidebreak.app
+```
+
+macOS may then ask you to grant Accessibility and Screen Recording again after
+each update, because an ad-hoc signature changes with every build.
+
+Each download has a `.sha256` sidecar on the same release if you want to check
+it:
 
 ```sh
 shasum -a 256 -c Tidebreak-macos-universal.dmg.sha256
@@ -29,8 +41,8 @@ release in the background and ask before restarting.
 
 ## Windows
 
-- [Download for x86_64 Windows](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-windows-x86_64-setup.exe)
-- [Download for ARM64 Windows](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-windows-aarch64-setup.exe)
+- [Download for x86_64 Windows](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-windows-x86_64-setup.exe)
+- [Download for ARM64 Windows](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-windows-aarch64-setup.exe)
 
 The NSIS installers are not yet Authenticode-signed, so Windows SmartScreen may
 warn on first run. Each release includes a `.sha256` sidecar for independent
@@ -40,10 +52,10 @@ download verification.
 
 Choose the portable AppImage or the Debian package for your architecture.
 
-- [Download x86_64 AppImage](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.AppImage)
-- [Download x86_64 Debian package](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.deb)
-- [Download ARM64 AppImage](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.AppImage)
-- [Download ARM64 Debian package](https://github.com/brightwave-inc/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.deb)
+- [Download x86_64 AppImage](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.AppImage)
+- [Download x86_64 Debian package](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-x86_64.deb)
+- [Download ARM64 AppImage](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.AppImage)
+- [Download ARM64 Debian package](https://github.com/naingthet/tidebreak/releases/latest/download/Tidebreak-linux-aarch64.deb)
 
 Linux packages are built on Ubuntu 22.04. Use Ubuntu 22.04, Debian 12, or a
 newer distribution with a compatible glibc baseline. The Debian package declares

@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-04
 - Owners: thet
-- Related: [0039](0039-allow-is-a-first-class-code-permission-mode.md) (Allow is a permission mode, confinement is the boundary); [0061](0061-schema-changes-are-migrations.md); [0064](0064-idle-engine-children-are-parked.md) (the machine already runs harness children lazily); [0071](0071-hosted-engines-ride-the-callers-inference.md); [0086](0086-session-access-is-separate-from-ownership.md); `docs/slack-sessions.md`; tidebreak #3178 (track C), #3184, #3216; brightwave-inc/model-gateway#1865
+- Related: [0039](0039-allow-is-a-first-class-code-permission-mode.md) (Allow is a permission mode, confinement is the boundary); [0061](0061-schema-changes-are-migrations.md); [0064](0064-idle-engine-children-are-parked.md) (the machine already runs harness children lazily); [0071](0071-hosted-engines-ride-the-callers-inference.md); [0086](0086-session-access-is-separate-from-ownership.md); `docs/slack-sessions.md`; tidebreak #3178 (track C), #3184, #3216; the adapter's end-to-end lane in Model Gateway
 - Supersedes: the "do not ship Slack on the machine engine" paragraph of `docs/slack-sessions.md`
 
 ## Context
@@ -21,7 +21,7 @@ harness children on the machine, parked when idle (decision 64), with
 inference through the relay (decision 71). Second, the rule left whole
 deployments without a single Slack session: every standalone machine, and
 every gateway deployment until an operator configures a runtime. The
-adapter's end-to-end lane (brightwave-inc/model-gateway#1865) found this
+adapter's end-to-end lane found this
 on its first run, and the reference deployment found the sandbox path
 itself unfinished (#3216).
 

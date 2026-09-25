@@ -114,7 +114,7 @@ describe("trackedCodeDeliveryRepositories", () => {
       monitorError: "old host failed",
       repositorySnapshot: {
         capability: { found: true, authenticated: true, remediation: "" },
-        repositories: [repository("brightwave-inc", "old", "repo-old")],
+        repositories: [repository("octo-org", "old", "repo-old")],
         errors: [],
         fetched_at: NOW,
       },
@@ -138,7 +138,7 @@ describe("trackedCodeDeliveryRepositories", () => {
   });
 
   it("keeps the last successful pull-request page for a query key", () => {
-    const repo = repository("brightwave-inc", "tidebreak", "repo-1");
+    const repo = repository("octo-org", "tidebreak", "repo-1");
     const key = deliveryPullRequestPageKey([codeDeliveryRepositoryKey(repo)], {
       search: "",
       repositoryKeys: [],
@@ -165,8 +165,8 @@ describe("trackedCodeDeliveryRepositories", () => {
   });
 
   it("combines registered and manual repositories, excludes opted-out rows, and pins first", () => {
-    const alpha = repository("brightwave-inc", "alpha", "repo-alpha");
-    const zeta = repository("brightwave-inc", "zeta", "repo-zeta");
+    const alpha = repository("octo-org", "alpha", "repo-alpha");
+    const zeta = repository("octo-org", "zeta", "repo-zeta");
     const beta = repository("other-org", "beta");
     const store = useCodeDeliveryStore.getState();
 
@@ -187,7 +187,7 @@ describe("trackedCodeDeliveryRepositories", () => {
 
     expect(tracked.map((item) => item.name_with_owner)).toEqual([
       "other-org/beta",
-      "brightwave-inc/alpha",
+      "octo-org/alpha",
     ]);
     expect(
       JSON.parse(
@@ -235,7 +235,7 @@ describe("known delivery authors", () => {
   });
 
   it("harvests authors and actors from a completed poll and persists them", () => {
-    const repo = repository("brightwave-inc", "alpha", "repo-alpha");
+    const repo = repository("octo-org", "alpha", "repo-alpha");
     useCodeDeliveryStore.getState().completeDeliveryPoll(
       [
         pullRequest(1, repo, {

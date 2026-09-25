@@ -65,8 +65,8 @@ export type GatewaySurfaces = {
   push?: boolean;
   /**
    * Whether this installation's `tidebreak-mobile` client may hold the gateway
-   * console resources (`control_plane`, `runtime:<slug>`) — the widening in
-   * brightwave-inc/model-gateway#2044. Absent on every gateway deployed today.
+   * console resources (`control_plane`, `runtime:<slug>`) — a widening of the
+   * gateway's client registration. Absent on every gateway deployed today.
    */
   tidebreak_mobile_console?: boolean;
   /**

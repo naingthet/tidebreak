@@ -58,7 +58,7 @@ services:
       - "5432"
 
   server:
-    image: ghcr.io/brightwave-inc/tidebreak-server:${TIDEBREAK_VERSION:?set TIDEBREAK_VERSION in .env (0.117.0 or later), or run ./setup.sh to add it}
+    image: ghcr.io/naingthet/tidebreak-server:${TIDEBREAK_VERSION:?set TIDEBREAK_VERSION in .env (0.117.0 or later), or run ./setup.sh to add it}
     restart: unless-stopped
     depends_on:
       postgres:

@@ -179,7 +179,7 @@ const RELAY_TARGET_ENV: &str = "TIDEBREAK_RELAY_TARGET";
 /// LibreOffice and the document skills' pinned Python dependencies, built and
 /// pushed by `.github/workflows/publish-sandbox-image.yml` so background
 /// document runs need no in-sandbox package install.
-const PUBLISHED_IMAGE_REPOSITORY: &str = "ghcr.io/brightwave-inc/tidebreak-sandbox-agent-documents";
+const PUBLISHED_IMAGE_REPOSITORY: &str = "ghcr.io/naingthet/tidebreak-sandbox-agent-documents";
 /// The immutable manifest-list digest (`sha256:<64 hex>`) of the published
 /// documents image the default configuration runs.
 ///
@@ -195,7 +195,7 @@ const PUBLISHED_IMAGE_REPOSITORY: &str = "ghcr.io/brightwave-inc/tidebreak-sandb
 /// [`LOCAL_DEV_IMAGE`] — a ref that only exists after a local `docker build`
 /// and carries no digest verification, which
 /// [`SandboxBackend::verifies_image_integrity`] reports honestly.
-// Manifest-list digest of ghcr.io/brightwave-inc/tidebreak-sandbox-agent-documents:main-20260924-3253a4d-r1518,
+// Manifest-list digest of ghcr.io/naingthet/tidebreak-sandbox-agent-documents:main-20260924-3253a4d-r1518,
 // published by workflow run 35957259753 (schedule, 2026-09-24); the run's
 // step summary records the same value from a post-push `imagetools inspect`.
 const PUBLISHED_IMAGE_DIGEST: Option<&str> =
@@ -1181,7 +1181,7 @@ mod tests {
         match PUBLISHED_IMAGE_DIGEST {
             Some(digest) => {
                 assert_eq!(default, format!("{PUBLISHED_IMAGE_REPOSITORY}@{digest}"));
-                assert!(PUBLISHED_IMAGE_REPOSITORY.starts_with("ghcr.io/brightwave-inc/"));
+                assert!(PUBLISHED_IMAGE_REPOSITORY.starts_with("ghcr.io/naingthet/"));
                 assert!(image_digest_pinned(&default));
                 assert!(DockerSandboxBackend::with_defaults().verifies_image_integrity());
             }
@@ -1192,13 +1192,11 @@ mod tests {
         }
 
         // The pin grammar itself: exactly a 64-hex sha256 suffix counts.
-        let digest_ref = format!("ghcr.io/brightwave-inc/example@sha256:{}", "a".repeat(64));
+        let digest_ref = format!("ghcr.io/naingthet/example@sha256:{}", "a".repeat(64));
         assert!(image_digest_pinned(&digest_ref));
-        assert!(!image_digest_pinned(
-            "ghcr.io/brightwave-inc/example:latest"
-        ));
+        assert!(!image_digest_pinned("ghcr.io/naingthet/example:latest"));
         assert!(!image_digest_pinned(&format!(
-            "ghcr.io/brightwave-inc/example@sha256:{}",
+            "ghcr.io/naingthet/example@sha256:{}",
             "a".repeat(63)
         )));
         assert!(!image_digest_pinned(&format!("@sha256:{}", "a".repeat(64))));

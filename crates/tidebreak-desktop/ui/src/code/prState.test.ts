@@ -26,16 +26,16 @@ function pr(
   overrides: Partial<CodeDeliveryPullRequestSummary> = {},
 ): CodeDeliveryPullRequestSummary {
   return {
-    id: "github.com/brightwave-inc/tidebreak#1",
+    id: "github.com/octo-org/tidebreak#1",
     repository: {
       host: "github.com",
-      owner: "brightwave-inc",
+      owner: "octo-org",
       name: "tidebreak",
-      name_with_owner: "brightwave-inc/tidebreak",
-      url: "https://github.com/brightwave-inc/tidebreak",
+      name_with_owner: "octo-org/tidebreak",
+      url: "https://github.com/octo-org/tidebreak",
     },
     number: 1,
-    url: "https://github.com/brightwave-inc/tidebreak/pull/1",
+    url: "https://github.com/octo-org/tidebreak/pull/1",
     title: "A pull request",
     state: "open",
     draft: false,

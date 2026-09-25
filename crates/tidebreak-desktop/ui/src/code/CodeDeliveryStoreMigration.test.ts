@@ -20,7 +20,7 @@ function legacyState() {
       {
         id: "pull_request_ready",
         enabled: false,
-        repositoryKeys: ["github.com/brightwave-inc/tidebreak"],
+        repositoryKeys: ["github.com/octo-org/tidebreak"],
         tidebreakLinkedOnly: true,
       },
       {
@@ -126,13 +126,13 @@ describe("delivery notification rule migration storage", () => {
         manualRepositories: [
           {
             host: "github.com",
-            owner: "brightwave-inc",
+            owner: "octo-org",
             name: "tidebreak",
-            name_with_owner: "brightwave-inc/tidebreak",
-            url: "https://github.com/brightwave-inc/tidebreak",
+            name_with_owner: "octo-org/tidebreak",
+            url: "https://github.com/octo-org/tidebreak",
           },
         ],
-        pinnedRepositoryKeys: ["github.com/brightwave-inc/tidebreak"],
+        pinnedRepositoryKeys: ["github.com/octo-org/tidebreak"],
         savedViews: [
           pullRequestView("kept"),
           { ...pullRequestView("bad"), filters: null },
@@ -145,7 +145,7 @@ describe("delivery notification rule migration storage", () => {
     expect(state.savedViews.map((view) => view.id)).toEqual(["kept"]);
     expect(state.manualRepositories).toHaveLength(1);
     expect(state.pinnedRepositoryKeys).toEqual([
-      "github.com/brightwave-inc/tidebreak",
+      "github.com/octo-org/tidebreak",
     ]);
     expect(state.knownAuthors).toEqual([{ login: "mara" }]);
     expect(state.legacyNotificationRules).toHaveLength(3);

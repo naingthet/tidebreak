@@ -83,7 +83,7 @@ const meta = {
   parameters: { layout: "fullscreen" },
   args: {
     open: true,
-    repoLabel: "brightwave-inc/tidebreak",
+    repoLabel: "octo-org/tidebreak",
     files: claudeHooksAndServers,
     onChoose: fn(),
     onDismiss: fn(),

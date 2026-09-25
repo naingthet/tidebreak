@@ -5361,6 +5361,9 @@ fn blocked_bundles_refuse_control_ops_and_grants_even_with_a_grant_present() {
 
 #[test]
 fn development_app_reads_and_control_require_explicit_app_grants() {
+    // A separate product from Tidebreak's own vendor, derived from Tidebreak's
+    // bundle identifier so it follows the identity wherever it moves.
+    let sibling_product = "io.brightwave.tidebreak".replace(".tidebreak", ".another-product");
     for bundle_id in [
         "com.apple.Terminal",
         "com.googlecode.iterm2",
@@ -5368,7 +5371,7 @@ fn development_app_reads_and_control_require_explicit_app_grants() {
         "com.jetbrains.CLion",
         "com.apple.dt.Xcode",
         "com.raycast.macos",
-        "io.brightwave.another-product",
+        sibling_product.as_str(),
         "dev.tidebreak.desktop-test",
     ] {
         let fixture = cu_setup();
