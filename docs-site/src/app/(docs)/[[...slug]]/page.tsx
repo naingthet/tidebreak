@@ -1,6 +1,6 @@
 import { getMDXComponents } from '@/mdx-components';
 import { getPageImage, source } from '@/lib/source';
-import { PUBLIC_DOCS_URL, REPO_URL } from '@/lib/site';
+import { DOWNLOAD_URL, PUBLIC_DOCS_URL, REPO_URL } from '@/lib/site';
 import {
   DocsBody,
   DocsDescription,
@@ -55,7 +55,7 @@ export default async function Page(props: PageProps<'/[[...slug]]'>) {
           </Link>
           <a
             className="docs-secondary-action"
-            href="https://www.tidebreak.io/download"
+            href={DOWNLOAD_URL}
           >
             <Download aria-hidden="true" />
             Download Tidebreak

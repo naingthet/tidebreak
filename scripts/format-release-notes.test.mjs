@@ -129,7 +129,7 @@ test("drops the page heading and empty first-contributor section", () => {
 ## 🙌 New Contributors
 
 
-**Full Changelog**: https://github.com/brightwave-inc/tidebreak/compare/v0.1.0...v0.2.0
+**Full Changelog**: https://github.com/octo-org/tidebreak/compare/v0.1.0...v0.2.0
 `;
 
   assert.equal(
@@ -139,7 +139,7 @@ test("drops the page heading and empty first-contributor section", () => {
 ## ✨ New Features
 - add document search ([#12](https://example.com/12)) by @octo
 
-**Full Changelog**: https://github.com/brightwave-inc/tidebreak/compare/v0.1.0...v0.2.0
+**Full Changelog**: https://github.com/octo-org/tidebreak/compare/v0.1.0...v0.2.0
 `,
   );
 });
@@ -152,7 +152,7 @@ test("keeps first-time contributors and a compare link", () => {
 
 - @newbie made their first contribution in [#21](https://example.com/21)
 
-**Full Changelog**: https://github.com/brightwave-inc/tidebreak/compare/v0.1.0...v0.2.0
+**Full Changelog**: https://github.com/octo-org/tidebreak/compare/v0.1.0...v0.2.0
 `;
 
   assert.equal(
@@ -166,7 +166,7 @@ test("keeps first-time contributors and a compare link", () => {
 
 - @newbie made their first contribution in [#21](https://example.com/21)
 
-**Full Changelog**: https://github.com/brightwave-inc/tidebreak/compare/v0.1.0...v0.2.0
+**Full Changelog**: https://github.com/octo-org/tidebreak/compare/v0.1.0...v0.2.0
 `,
   );
 });

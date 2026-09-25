@@ -26,59 +26,30 @@ its doc comment for legibility.
 
 ## Publishing
 
-[`.github/workflows/publish-e2b-template.yml`](../../../.github/workflows/publish-e2b-template.yml)
-does this. It runs on every push to `main` that touches this directory, reads
-the alias and sizing out of `e2b.toml`, and:
+Nothing in this repository publishes the template on its own: an E2B build
+needs an E2B account, and E2B is a paid service. To publish a new version, run
+the commands under [Publishing by hand](#publishing-by-hand) with your own
+E2B API key.
 
-1. asks E2B whether that alias already resolves and is public. If it does, the
-   run logs it and stops — re-runs and edits to this README cost one API call;
-2. otherwise builds the template from `e2b.Dockerfile` on E2B's own
-   infrastructure and publishes it, making it creatable by any E2B account;
-3. verifies the alias now resolves as public, then opens a PR bumping
-   `E2B_TEMPLATE` in `e2b.rs` to the template ID it resolves to.
+A publish from inside the owning account cannot prove *cross-account*
+resolution, which is the whole point of publishing. Check it once, by hand,
+with a throwaway account's API key and the template ID the publish printed
+(the alias would 404 from another account even when everything is right):
 
-Because the alias is version-suffixed, the pin PR from a sandbox image publish
-is what puts a new alias in `e2b.toml`, and merging that PR is what sets this
-workflow going. Nothing else has to be done by hand.
+```sh
+E2B_API_KEY=<other-account-key> \
+  e2b sandbox create <template-id>
+```
 
-**One-time setup.** The workflow needs an E2B API key for the Tidebreak account
-in the `E2B_API_KEY` Actions secret (Settings → Secrets and variables →
-Actions), copied from the [E2B dashboard's Keys
-tab](https://e2b.dev/dashboard?tab=keys). Only a repository admin can set it.
-Without it the run fails and says so rather than skipping, because a silent
-skip is indistinguishable from "nothing to do" and would leave every E2B user
-on the `code-interpreter-v1` fallback with no signal. `E2B_ACCESS_TOKEN` (the
-dashboard's Personal tab) is optional and only passed through for the few
-team-scoped endpoints that still take it; the CLI's `template create` and
-`template list` both require the API key.
+### Publishing by hand
 
-Two things the workflow deliberately does not do:
-
-- It will not republish an alias that is already public, so editing
-  `e2b.Dockerfile` without bumping the alias in `e2b.toml` changes nothing on
-  E2B. That is the right default — a published alias is a promise about
-  contents — but when a rebuild under the same name really is what you want,
-  dispatch the workflow manually with `force_rebuild` set.
-- It cannot prove *cross-account* resolution, which is the whole point of
-  publishing and the one thing a publish from inside the account does not
-  demonstrate. Check it once, by hand, with a throwaway account's API key and
-  the template ID from the run's summary (the alias would 404 from another
-  account even when everything is right):
-
-  ```sh
-  E2B_API_KEY=<other-account-key> \
-    e2b sandbox create <template-id>
-  ```
-
-### Doing it by hand
-
-The fallback, for when the workflow is broken or the secret is not set yet.
-Run from this directory, on a machine authenticated against the Tidebreak E2B
-account. `e2b auth login` uses a browser; `E2B_API_KEY` works headless.
+Run from this directory, on a machine authenticated against the E2B account
+that will own the template. `e2b auth login` uses a browser; `E2B_API_KEY`
+works headless.
 
 ```sh
 npm install --global @e2b/cli@2.16.1    # or: brew install e2b
-export E2B_API_KEY=<tidebreak-account-key>
+export E2B_API_KEY=<your-e2b-api-key>
 
 # Build System 2.0 (current CLI). The build runs on E2B's infrastructure — no
 # local Docker daemon. The name is the public alias; `create` takes no config
@@ -109,9 +80,8 @@ step is a PR someone merges:
    `e2b.Dockerfile`'s digest and tag comment and renames the alias in
    `e2b.toml` to match the new version, e.g. `tidebreak-documents-v0-27-0`.
    Merge it.
-2. That merge touches this directory, so `publish-e2b-template.yml` builds and
-   publishes the new alias, then opens the PR moving `E2B_TEMPLATE` onto the
-   new template's ID. Merge that one too.
+2. Publish the new alias [by hand](#publishing-by-hand), then open a PR that
+   moves `E2B_TEMPLATE` onto the new template's ID.
 
 `E2B_TEMPLATE` moves last on purpose: until the template is actually published,
 the new template resolves for nobody and every E2B user drops to

@@ -1,0 +1,41 @@
+name: Set up sccache with the GitHub Actions cache
+description: Install sccache and back it with this repository's GitHub Actions cache.
+
+inputs:
+  access:
+    description: Use read for pull requests and write for main, scheduled, manual, and release builds.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Configure compiler cache environment
+      shell: bash
+      env:
+        CACHE_ACCESS: ${{ inputs.access }}
+      run: |
+        case "$CACHE_ACCESS" in
+          read) cache_mode=READ_ONLY ;;
+          write) cache_mode=READ_WRITE ;;
+          *)
+            echo "Compiler cache access must be read or write." >&2
+            exit 1
+            ;;
+        esac
+        # GitHub scopes each Actions cache entry to the ref that wrote it, and
+        # a run reads only its own ref's entries and the default branch's. Pull
+        # requests read main's compiler objects and write none, so they can
+        # neither poison main's cache nor crowd it out of the size budget.
+        {
+          echo "SCCACHE_GHA_ENABLED=true"
+          echo "SCCACHE_GHA_VERSION=rust-v1"
+          echo "SCCACHE_GHA_RW_MODE=$cache_mode"
+        } >> "$GITHUB_ENV"
+
+    # The action also exports the runtime token and results URL that the
+    # GitHub Actions cache backend needs, so it must run after the settings
+    # above and before the first compile starts the sccache server.
+    - name: Install sccache
+      uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+      with:
+        version: v0.16.0

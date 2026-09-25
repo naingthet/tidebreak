@@ -49,6 +49,23 @@ test("treats an in-flight prerelease as a published baseline", () => {
   );
 });
 
+test("does not treat a voice helper release as a published baseline", () => {
+  assert.deepEqual(
+    planReleaseBaseline({
+      releases: [
+        {
+          id: 5,
+          tag_name: "whisper-helper-v0.1.0",
+          draft: false,
+          prerelease: true,
+        },
+      ],
+      tags: ["refs/tags/v0.116.0"],
+    }).action,
+    "fail",
+  );
+});
+
 test("does not treat a draft prerelease as a published baseline", () => {
   assert.equal(
     planReleaseBaseline({

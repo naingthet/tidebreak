@@ -22,8 +22,11 @@ export function versionTagsFromRefs(refs) {
 }
 
 export function planReleaseBaseline({ releases, tags }) {
+  // Only app releases count. Other published releases in the repository,
+  // such as a whisper-helper-vX.Y.Z helper release, carry no version tag.
   const published = normalizeReleaseList(releases).filter(
-    (release) => release?.draft === false,
+    (release) =>
+      release?.draft === false && Boolean(parseReleaseTag(release?.tag_name ?? "")),
   );
   const versionTags = versionTagsFromRefs(tags);
 

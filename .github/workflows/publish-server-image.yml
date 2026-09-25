@@ -10,8 +10,8 @@ run-name: >-
 # Builds the self-host server from deploy/self-host/Dockerfile and publishes it
 # to GHCR:
 #
-#   ghcr.io/brightwave-inc/tidebreak-server
-#   ghcr.io/brightwave-inc/tidebreak-supervised-agent
+#   ghcr.io/naingthet/tidebreak-server
+#   ghcr.io/naingthet/tidebreak-supervised-agent
 #
 # Both images share verified tools and source. The supervised agent uses
 # Gateway's BYO startup contract and contains no server or renderer.

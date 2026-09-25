@@ -79,7 +79,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docs_site: ${{ steps.scope.outputs.docs_site }}
-      e2b_cli: ${{ steps.scope.outputs.e2b_cli }}
       e2e: ${{ steps.scope.outputs.e2e }}
       notices: ${{ steps.scope.outputs.notices }}
       rust: ${{ steps.scope.outputs.rust }}
@@ -101,7 +100,6 @@ jobs:
           full_validation() {
             {
               echo "docs_site=true"
-              echo "e2b_cli=true"
               echo "e2e=true"
               echo "notices=true"
               echo "rust=true"
@@ -148,7 +146,6 @@ jobs:
           # end-to-end lane: the server (`workspace`), the renderer (`ui`), or
           # the flows themselves.
           docs_site=false
-          e2b_cli=false
           e2e=false
           notices=false
           rust=false
@@ -158,9 +155,7 @@ jobs:
             > "$RUNNER_TEMP/changed-files"
           while IFS= read -r -d '' file; do
             case "$file" in
-              docs-site/*) docs_site=true ;;
-              .github/e2b-cli/*|.github/workflows/publish-e2b-template.yml)
-                e2b_cli=true ;;
+              docs-site/*|.github/workflows/docs.yml) docs_site=true ;;
               # The flows and their runner reach no crate, so they must be
               # matched before the catch-all turns them into a Rust change.
               e2e/*|scripts/e2e.sh) e2e=true ;;
@@ -172,7 +167,6 @@ jobs:
               *.md|docs/*|assets/*|.githooks/*|LICENSE|NOTICE) ;;
               .github/workflows/ci.yml)
                 docs_site=true
-                e2b_cli=true
                 e2e=true
                 notices=true
                 rust=true
@@ -221,7 +215,6 @@ jobs:
 
           {
             echo "docs_site=$docs_site"
-            echo "e2b_cli=$e2b_cli"
             echo "e2e=$e2e"
             echo "notices=$notices"
             echo "rust=$rust"
@@ -264,33 +257,6 @@ jobs:
           docker run --rm -v "$PWD:/repo" \
             ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
             detect --source=/repo --redact --verbose "${log_opts[@]}"
-
-  e2b-cli:
-    name: E2B publication tooling
-    needs: changes
-    if: ${{ needs.changes.outputs.e2b_cli == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10.18.3
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: .github/e2b-cli/pnpm-lock.yaml
-      - name: Install the locked E2B CLI
-        run: pnpm --dir .github/e2b-cli install --frozen-lockfile --ignore-scripts
-      - name: Verify the local E2B CLI pin
-        run: |
-          expected="$(node -p "require('./.github/e2b-cli/package.json').dependencies['@e2b/cli']")"
-          actual="$(.github/e2b-cli/node_modules/.bin/e2b --version)"
-          [[ "$actual" == "$expected" ]] || {
-            echo "Expected E2B CLI $expected, got $actual" >&2
-            exit 1
-          }
 
   advisories:
     name: supply-chain advisories (cargo-deny)
@@ -398,7 +364,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      id-token: write
     env:
       CARGO_INCREMENTAL: 0
       CARGO_PROFILE_DEV_DEBUG: 0
@@ -410,10 +375,9 @@ jobs:
       - name: Install toolchain (honors rust-toolchain.toml)
         run: rustup show
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - name: Install system deps (Tauri)
         timeout-minutes: 8
         run: |
@@ -453,7 +417,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      id-token: write
     env:
       CARGO_INCREMENTAL: 0
       CARGO_PROFILE_DEV_DEBUG: 0
@@ -469,10 +432,9 @@ jobs:
         with:
           tool: cargo-nextest@0.9.143
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - name: Install system deps (Tauri)
         timeout-minutes: 8
         run: |
@@ -515,16 +477,12 @@ jobs:
     # clippy: a Windows compile break on main blocks the desktop release, so
     # every Rust-scoped pull request has to catch it.
     if: ${{ needs.changes.outputs.rust == 'true' }}
-    # Prefer an 8 vCPU / 32 GB Windows larger runner. Standard windows-latest
-    # is 4 cores and spends most of this lane in rustc; 16 cores is not worth
-    # the extra cost for cargo check. Set CI_WINDOWS_RUNNER to the provisioned
-    # label. If the variable is unset, the job uses windows-latest so a missing
-    # larger runner cannot stall merges.
-    runs-on: ${{ vars.CI_WINDOWS_RUNNER || 'windows-latest' }}
+    # Standard hosted runners are free for public repositories; larger
+    # runners are billed, so this lane stays on windows-latest.
+    runs-on: windows-latest
     timeout-minutes: 20
     permissions:
       contents: read
-      id-token: write
     env:
       CARGO_INCREMENTAL: 0
       CARGO_PROFILE_DEV_DEBUG: 0
@@ -558,10 +516,9 @@ jobs:
         run: rustup show
       - name: Set up compiler cache
         if: ${{ steps.tip.outputs.superseded != 'true' }}
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         if: ${{ steps.tip.outputs.superseded != 'true' }}
         with:
@@ -611,7 +568,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      id-token: write
     env:
       CARGO_INCREMENTAL: 0
       CARGO_PROFILE_DEV_DEBUG: 0
@@ -624,10 +580,9 @@ jobs:
       - name: Install toolchain (honors rust-toolchain.toml)
         run: rustup show
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           shared-key: macos-sandbox-cargo-registry-v1-${{ hashFiles('Cargo.lock') }}
@@ -666,7 +621,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-      id-token: write
     env:
       CARGO_INCREMENTAL: 0
       CARGO_PROFILE_DEV_DEBUG: 0
@@ -683,10 +637,9 @@ jobs:
         with:
           tool: cargo-nextest@0.9.143
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           shared-key: macos-desktop-cargo-registry-v1-${{ hashFiles('Cargo.lock') }}
@@ -714,15 +667,12 @@ jobs:
     name: test partition ${{ matrix.part }}/3
     needs: changes
     if: ${{ needs.changes.outputs.workspace == 'true' }}
-    # Prefer an 8 vCPU larger runner: this lane splits roughly evenly between
-    # compiling and running tests, and both scale with cores. Set
-    # CI_TEST_RUNNER to the provisioned label. If the variable is unset, the
-    # job uses ubuntu-latest so a missing larger runner cannot stall merges.
-    runs-on: ${{ vars.CI_TEST_RUNNER || 'ubuntu-latest' }}
+    # Standard hosted runners are free for public repositories; larger
+    # runners are billed, so the partitions stay on ubuntu-latest.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -742,10 +692,9 @@ jobs:
         with:
           tool: cargo-nextest@0.9.143
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - name: Install headless system deps
         timeout-minutes: 8
         run: |
@@ -812,7 +761,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      id-token: write
     services:
       postgres:
         image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
@@ -839,10 +787,9 @@ jobs:
       - name: Install toolchain (honors rust-toolchain.toml)
         run: rustup show
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           shared-key: cargo-registry-v3-${{ hashFiles('Cargo.lock') }}
@@ -876,7 +823,6 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: read
-      id-token: write
     env:
       CARGO_INCREMENTAL: 0
       CARGO_PROFILE_DEV_DEBUG: 0
@@ -886,10 +832,9 @@ jobs:
       - name: Install toolchain (honors rust-toolchain.toml)
         run: rustup show
       - name: Set up compiler cache
-        uses: ./.github/actions/setup-sccache-s3
+        uses: ./.github/actions/setup-sccache
         with:
           access: ${{ github.event_name == 'pull_request' && 'read' || 'write' }}
-          remote-cache-enabled: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           shared-key: cargo-registry-v3-${{ hashFiles('Cargo.lock') }}

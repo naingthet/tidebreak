@@ -157,76 +157,71 @@ automatic.
    merges start a new notes draft instead of appending to the in-flight
    release. The GitHub Release is published only after those assets are
    attached.
-5. In parallel with the desktop build, the documentation builder checks out
-   that validated SHA and builds `docs-site/` as a static export under `/docs`.
-   Publication waits until the GitHub Release itself has been published. It
-   then creates an unaliased production-target deployment in the
-   dedicated Vercel project, smoke-tests the staged root page, nested content,
-   search index, sitemap, assets, and canonical metadata, and only then
-   promotes that immutable deployment to `tidebreak-docs.vercel.app`. The
-   `docs-production` environment supplies the only required secret,
-   `VERCEL_TOKEN`, a team access token. Publication calls that send the token
-   also send `teamId`. The project and organization identifiers are non-secret
-   workflow constants. A failed build or smoke test leaves the previous docs
-   deployment serving production.
-6. The workflow first checks whether that exact tag, commit, and publication
-   date already have a complete immutable release on S3. Credential-free macOS
-   and Windows prerequisites otherwise compile the tag once with its product
-   version. Each prerequisite uploads the final desktop binary, sidecars, and
-   Tauri configuration in a run-scoped archive with SHA-256 manifests.
-7. The macOS and Windows production jobs verify those archives before loading
+5. The workflow compiles the tag once in credential-free macOS and Windows
+   prerequisite jobs, with its product version. Each prerequisite uploads the
+   final desktop binary, sidecars, and Tauri configuration in a run-scoped
+   archive with SHA-256 manifests.
+6. The macOS and Windows production jobs verify those archives before loading
    signing material, then run `tauri bundle` against the prepared binaries.
-   They do not compile Rust or rebuild the frontend. The macOS job signs the app
-   with the Developer ID identity, submits the DMG to Apple's notary service
-   once, staples the resulting ticket to both the DMG and the app,
-   verifies them with Apple tooling, and creates a signed Tauri updater archive.
-   Parallel Windows and Linux jobs produce x86_64 and ARM64 NSIS, AppImage, and
-   Debian packages; every package is signed with the Tauri updater key after
-   packaging. A fresh release cannot continue unless every operating-system
-   and architecture build the dispatch selected succeeds. Windows and Linux
-   are paused by default; see [Paused platforms](#paused-platforms).
-8. For a release that is not already hosted, a separate least-privilege job
-   generates an SPDX JSON SBOM from the exact released source and checksums it
-   independently of the package builds. That job has no production environment,
-   deployment variables, OIDC permission, or AWS role; it transfers the two
-   files to the publisher through a pinned GitHub artifact action. Publication
-   waits for both the package build and source SBOM. The source-tree SBOM is
-   deliberately published as source-scoped metadata, not attested as a
-   description of the packaged installers.
-9. Before publication, a credential-free job attaches the verified build
-   outputs and their `.sha256` sidecars to the draft GitHub Release. Stable
-   download names include the notarized disk image as
-   `Tidebreak-macos-universal.dmg`, plus the byte-identical legacy
-   `Tidebreak-macos-apple-silicon.dmg` alias that keeps the existing README URL
-   live through the transition, plus architecture-specific Windows installers,
-   Linux AppImages, and Linux Debian packages. It also
-   retains the versioned packages, updater artifacts and signatures, source
-   SBOM, and checksum sidecars on GitHub as recovery inputs. This job holds no
-   signing or AWS credentials. The stable names omit the version so that
-   `https://github.com/brightwave-inc/tidebreak/releases/latest/download/<name>`
-   stays a permanent download link for the README; the release page and the
-   app's own version string identify which build it is.
-10. Only after every GitHub asset is present does the workflow restore the
-    frozen title and notes and publish the draft. GitHub then locks the release
-    tag and assets. The workflow uses GitHub's resulting publication timestamp
-    to create and attest the hosted manifest, uploads immutable versioned files,
-    advances the public manifests, requests CDN invalidation of their paths
-    without waiting for propagation, and smoke-tests
-    the hosted release with cache-busting reads. If a prior attempt already uploaded the complete
-    immutable prefix, a new dispatch validates and reuses those bytes, skips the
-    desktop build, and resumes only mutable metadata publication, CDN
-    invalidation, and smoke testing. If GitHub publication succeeded but hosted
-    publication did not, the retry downloads and verifies the retained GitHub
-    assets, reconstructs the hosted release inputs from those immutable bytes,
-    and resumes S3/CDN publication without rebuilding signed or notarized
-    artifacts.
+   They do not compile Rust or rebuild the frontend. With Apple signing
+   configured, the macOS job signs the app with the Developer ID identity,
+   submits the DMG to Apple's notary service once, staples the resulting
+   ticket to both the DMG and the app, and verifies them with Apple tooling.
+   Without it, the job signs the app ad-hoc and skips notarization, and the
+   published release notes explain how to open the app; see
+   [Production signing configuration](#production-signing-configuration).
+   Either way the job creates a Tauri updater archive signed with the updater
+   key. Parallel Windows and Linux jobs produce x86_64 and ARM64 NSIS,
+   AppImage, and Debian packages; every package is signed with the Tauri
+   updater key after packaging. A release cannot continue unless every
+   operating-system and architecture build the dispatch selected succeeds.
+   Windows and Linux are paused by default; see
+   [Paused platforms](#paused-platforms).
+7. A separate least-privilege job generates an SPDX JSON SBOM from the exact
+   released source and checksums it independently of the package builds. That
+   job has no production environment, deployment variables, or OIDC
+   permission; it transfers the two files through a pinned GitHub artifact
+   action. The source-tree SBOM is deliberately published as source-scoped
+   metadata, not attested as a description of the packaged installers.
+8. A credential-free job gathers the verified build outputs, refuses to
+   publish a version older than the latest published release, and generates
+   `manifest.json` and the updater feed `latest.json` with
+   `scripts/create-release-manifests.mjs`. Every URL in them points at the
+   tag's own release downloads,
+   `https://github.com/naingthet/tidebreak/releases/download/<tag>/<asset>`.
+   The job attaches every versioned package, updater signature, checksum
+   sidecar, the source SBOM, and both manifests to the draft, plus stable
+   download names: the disk image as `Tidebreak-macos-universal.dmg` with a
+   byte-identical `Tidebreak-macos-apple-silicon.dmg` alias, and the
+   architecture-specific Windows installers, Linux AppImages, and Linux Debian
+   packages. The stable names omit the version so that
+   `https://github.com/naingthet/tidebreak/releases/latest/download/<name>`
+   stays a permanent download link for the README. On a public repository the
+   job first records a provenance attestation for every file the run built.
+   It holds no signing credentials.
+9. Only after every asset is present does the workflow restore the frozen
+   title and notes and publish the draft. GitHub then locks the release tag
+   and assets, and
+   `https://github.com/naingthet/tidebreak/releases/latest/download/latest.json`
+   starts serving the new feed to installed apps. The workflow then dispatches
+   the server image build and refreshes the next release draft, so
+   **Publish server image** and **Release draft** must stay enabled.
+10. Dispatching the workflow again for a release that is already published
+    rebuilds and uploads nothing. It downloads the published assets, checks
+    every checksum, regenerates `latest.json` from `manifest.json`, and
+    compares the result with the published feed.
 
 Running **Publish desktop release** is the only release operation. Merging
 ordinary PRs updates the draft but never builds or ships a desktop version, and
-manually clicking GitHub's **Publish release** button is no longer part of the
+manually clicking GitHub's **Publish release** button is not part of the
 procedure. The GitHub Release becomes public only after its verified assets are
-attached; the release is considered fully shipped when the workflow also
-finishes hosted metadata and documentation publication successfully.
+attached, and publishing it is what ships: the updater feed and the README's
+download links follow the latest published release.
+
+The documentation site deploys separately. The **Publish documentation**
+workflow builds `docs-site/` and deploys it to GitHub Pages at
+`https://naingthet.github.io/tidebreak/docs/` on every push to `main` that
+changes it.
 
 ## Public desktop delivery
 
@@ -241,15 +236,15 @@ executable and the host broker contain both slices.
 
 `RELEASE_PLATFORMS` in `scripts/create-release-manifests.mjs` is the single
 source of truth for what a release contains: it drives the manifest, the
-`latest.json` platform keys, and the immutable prefix below. The immutable
-manifest contains one `macos/universal` artifact set; `latest.json` advertises
+`latest.json` platform keys, and the release asset names. The manifest
+contains one universal macOS artifact set; `latest.json` advertises
 that same signed updater archive under both `darwin-aarch64` and
 `darwin-x86_64`, so either native updater downloads identical universal bytes.
 
-The preflight that resumes an already-hosted release validates it against the
-current platform set. A release published before this platform change cannot
-be re-dispatched: it fails on the artifact paths and updater keys instead of
-silently republishing a different release shape.
+Re-dispatching the workflow for a published release checks its manifest
+against the current platform set. A release published before a platform change
+fails that check on its artifact names and updater keys instead of passing
+with a different release shape.
 
 ### Paused platforms
 
@@ -261,8 +256,8 @@ downloads, and manifest entries all key off it: `all` builds every platform
 and `macos` skips the Windows and Linux jobs. The input's default is what a
 draft publishes with; change it to resume those platforms for every release,
 or dispatch the workflow with `all` for one release. A retry of an existing
-release must repeat the selection its original run used, because the hosted
-manifest is validated against that platform set.
+release must repeat the selection its original run used, because the attached
+manifest is checked against that platform set.
 
 The default is `macos`. It flipped after v0.109.0, the release that shipped
 the desktop updater's missing-platform handling (`TargetNotFound` reads as
@@ -280,7 +275,10 @@ carried, so `latest.json` lists only macOS and an installed Windows or Linux
 app reports no update rather than a build that does not exist. The last
 release that built every platform is the one those carried downloads come
 from; find it by following the chain of release pages back to one with
-versioned `Tidebreak_<version>_<arch>` Windows and Linux assets.
+versioned `Tidebreak_<version>_<arch>` Windows and Linux assets. A repository
+with no earlier release, or whose latest release carries no Windows or Linux
+downloads, has nothing to carry: that release ships macOS downloads only, and
+the Windows and Linux links work once a release includes those platforms.
 
 ### Windows: unsigned x86_64 and ARM64 NSIS
 
@@ -297,7 +295,7 @@ builds check that authenticated feed and ask before restarting into the new
 installer.
 
 The credential-free `prepare_windows` and `prepare_windows_desktop` jobs reuse
-compiler outputs directly from the shared S3 `sccache` backend. They compile
+compiler outputs from sccache's GitHub Actions cache backend. They compile
 the sidecars and desktop in parallel for the
 exact release tag and product version, then save separate prepared archives for
 the credentialed packaging job. The Windows ARM jobs keep the
@@ -330,12 +328,12 @@ installation, and computer use remain governed by their existing platform
 capability checks; packaging the desktop does not claim those features on
 Linux.
 
-The Linux packaging job reads and writes compiler outputs through the shared
-S3 `sccache` backend. It uses the Cargo download cache without storing target
+The Linux packaging job reads and writes compiler outputs through sccache's
+GitHub Actions cache backend. It uses the Cargo download cache without storing target
 outputs and does not enable pnpm caching. It builds both formats from the
 validated release tag before the updater private key enters the step
 environment, then signs and collects only the completed package bytes. The
-compile step can write S3 cache entries without receiving the updater key.
+compile step can write cache entries without receiving the updater key.
 
 The Linux packaging step extracts its dependency installer from the dispatching
 workflow SHA while keeping application HEAD at the validated release SHA. Default
@@ -346,54 +344,39 @@ time for the final `--no-download` install within the eight-minute step. ARM and
 explicit endpoint overrides keep their existing installation path. APT signature
 checks stay enabled.
 
-The public download contract is rooted at:
+The public download contract is this repository's GitHub Releases. Every
+release carries flat assets under its tag's download path,
+`https://github.com/naingthet/tidebreak/releases/download/vMAJOR.MINOR.PATCH/`:
 
 ```text
-https://downloads.brightwave.io/tidebreak/
+manifest.json and latest.json
+Tidebreak_VERSION_universal.dmg, .app.zip, .app.tar.gz, and .app.tar.gz.sig
+Tidebreak_VERSION_ARCH-setup.exe and its .sig             (when Windows is built)
+Tidebreak_VERSION_ARCH.AppImage, .deb, and their .sig     (when Linux is built)
+Tidebreak_VERSION_source.spdx.json
+Tidebreak-macos-universal.dmg and the other version-free download names
 ```
 
-Each release has an immutable prefix:
+Every file has a `.sha256` sidecar. The updater feed is the newest published
+release's `latest.json`, which GitHub serves at
+`https://github.com/naingthet/tidebreak/releases/latest/download/latest.json`.
+The workflow refuses to publish a version older than the latest published
+release, and GitHub's immutable releases keep a published release's assets
+from changing.
 
-```text
-tidebreak/releases/vMAJOR.MINOR.PATCH/
-├── manifest.json
-├── macos/
-│   └── universal/
-├── windows/
-│   ├── x86_64/
-│   └── aarch64/
-└── linux/
-    ├── x86_64/
-    └── aarch64/
-```
-
-The macOS directory contains a notarized DMG, a zip of the notarized app, a
-signed `.app.tar.gz` updater archive, its signature, and SHA-256 files. The
-Windows directory contains an unsigned NSIS installer, its Tauri updater
-signature, and SHA-256 files. The Linux directory contains an AppImage, a
-Debian package, both updater signatures, and SHA-256 files. The immutable
-release root also contains
-`Tidebreak_VERSION_source.spdx.json` and its checksum. The root `manifest.json`
-inside each versioned prefix is immutable; only the unversioned
-Tauri-compatible `manifest.json` and `latest.json` pointers are mutable. The
-workflow refuses to overwrite a versioned object with different bytes or move
-`latest.json` to an older version.
-
-After the repository is public, verify the independently signed provenance for
-any downloaded artifact with GitHub CLI:
+Verify the independently signed provenance for any downloaded artifact with
+GitHub CLI:
 
 ```sh
 gh attestation verify Tidebreak-macos-universal.dmg \
-  --repo brightwave-inc/tidebreak
+  --repo naingthet/tidebreak
 ```
 
-GitHub artifact attestations require a public repository unless the owner uses
-GitHub Enterprise Cloud. While this repository remains private on another
-plan, the workflow still publishes the checksummed, source-scoped SBOM but
-skips provenance attestation rather than making private release retries fail.
-The SBOM inventories the released source checkout; it must not be interpreted
-as an inventory of files or dependencies embedded in the DMG, app bundle, or
-updater archive.
+GitHub artifact attestations are free for public repositories. A private copy
+of this repository on a plan without them skips the attestation step and still
+publishes the checksummed, source-scoped SBOM. The SBOM inventories the
+released source checkout; it must not be interpreted as an inventory of files
+or dependencies embedded in the DMG, app bundle, or updater archive.
 
 Packaged macOS apps check `latest.json` 15 seconds after launch and every
 hour. When a newer signed version is available, the Tauri updater downloads
@@ -412,17 +395,18 @@ says why. With **Download updates
 automatically** turned off in **Settings → Updates**, or by the
 `DownloadUpdatesAutomatically` [managed policy](managed-policy.md), the app
 still checks and reports the update as available, and downloads it only when
-the user chooses **Download update**. Development builds do not contact an update feed. Packaged staging builds
-check the staging feed under `/tidebreak/staging/latest.json` instead.
+the user chooses **Download update**. Development builds do not contact an update feed.
 
 The first release containing this client integration is a bootstrap release:
 older installed binaries have no updater and therefore cannot discover it.
 Users must install that first updater-enabled release manually; subsequent
 releases can advance automatically.
 
-Protected continuous integration, staging, and release jobs reuse Rust
-compiler outputs through the private S3 `sccache` backend. Same-repository pull
-requests receive read-only access, and fork pull requests skip remote access.
+Continuous integration and release jobs reuse Rust compiler outputs through
+sccache's GitHub Actions cache backend. Pull requests read the cache and never
+write it; pushes to `main`, scheduled and manual runs, and releases write it.
+GitHub scopes each cache entry to the ref that wrote it, so a pull request
+cannot change what `main` reads.
 The credential-free release jobs compile the exact tag and product version, so
 version-sensitive product crates may miss while shared dependencies still hit.
 The separate Cargo download caches retain `cache-targets: false` and do not
@@ -437,131 +421,56 @@ job verifies both prepared slices, combines the desktop binary and both
 sidecars with `lipo`, and uploads the universal inputs and Tauri configuration
 in a one-day artifact. The `desktop-production` job verifies that artifact
 before it loads signing material, then packages those exact binaries without
-compiling again. If S3 has no matching entry, the release job compiles it and
-can write it for a later build.
+compiling again. If the cache has no matching entry, the release job compiles
+it and writes it for a later build.
 
 The signing and notarization job stays on its own standard runner because it
 receives the prepared universal inputs and does not compile the application.
 
-### Production environment configuration
+### Production signing configuration
 
-Create a GitHub environment named `desktop-production`. Store these secrets in
-that environment:
+The release jobs that sign run in a GitHub environment named
+`desktop-production`, which GitHub creates the first time a release runs.
+Store the secrets below as repository secrets or as that environment's
+secrets. Two are required:
 
-| Secret                               | Value                                                       |
-| ------------------------------------ | ----------------------------------------------------------- |
-| `APPLE_CERTIFICATE`                  | Base64-encoded Developer ID Application `.p12`              |
-| `APPLE_CERTIFICATE_PASSWORD`         | Password used when exporting that `.p12`                    |
-| `APPLE_API_PRIVATE_KEY`              | Complete App Store Connect `.p8` private key                |
-| `TAURI_SIGNING_PRIVATE_KEY`          | Private key used to sign Tauri updater archives             |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for the Tauri updater-signing key                  |
+| Secret                               | Value                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `TAURI_SIGNING_PRIVATE_KEY`          | Private key that signs Tauri updater archives and the voice helper    |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for that key                                                 |
 
-Retain the Tauri updater keypair. Its public key is intentionally committed in
+Retain the Tauri updater keypair. Its public key is committed in
 `crates/tidebreak-desktop/tauri.conf.json` so packaged apps can verify update
-signatures. Only the private key and its password belong in GitHub secrets.
+signatures, and `crates/tidebreak-desktop/src/whisper_install.rs` pins the
+same key for the voice helper. Only the private key and its password belong in
+GitHub secrets.
 
-Configure these environment variables:
+Apple signing is optional. Configure all six values below to sign the macOS
+app with a Developer ID certificate and notarize it. Configure none of them to
+ship an ad-hoc signed build; its release notes then tell people how to open
+it. A partial set fails the release rather than quietly falling back.
 
-| Variable                                   | Value                                                            |
-| ------------------------------------------ | ---------------------------------------------------------------- |
-| `APPLE_SIGNING_IDENTITY`                   | Developer ID Application signing identity                        |
-| `APPLE_API_KEY_ID`                         | App Store Connect API key ID                                      |
-| `APPLE_API_ISSUER`                         | App Store Connect API issuer UUID                                 |
-| `AWS_RELEASE_ROLE_ARN`                     | GitHub OIDC role allowed to publish Tidebreak release files        |
-| `DOWNLOADS_S3_BUCKET`                      | S3 bucket behind `downloads.brightwave.io`                        |
-| `DOWNLOADS_CLOUDFRONT_DISTRIBUTION_ID`     | CloudFront distribution serving the bucket                        |
-| `DOWNLOADS_AWS_REGION`                     | AWS region; defaults to `us-east-1` when omitted                   |
+| Name                         | Kind     | Value                                          |
+| ---------------------------- | -------- | ---------------------------------------------- |
+| `APPLE_CERTIFICATE`          | secret   | Base64-encoded Developer ID Application `.p12` |
+| `APPLE_CERTIFICATE_PASSWORD` | secret   | Password used when exporting that `.p12`       |
+| `APPLE_API_PRIVATE_KEY`      | secret   | Complete App Store Connect `.p8` private key   |
+| `APPLE_SIGNING_IDENTITY`     | variable | Developer ID Application signing identity      |
+| `APPLE_API_KEY_ID`           | variable | App Store Connect API key ID                   |
+| `APPLE_API_ISSUER`           | variable | App Store Connect API issuer UUID              |
 
-The IAM role must trust GitHub's OIDC provider with the environment subject
-`repo:brightwave-inc/tidebreak:environment:desktop-production`. Grant only the
-S3 permissions needed beneath `tidebreak/` and CloudFront invalidation access for
-the configured distribution. No long-lived AWS access key belongs in GitHub.
+An ad-hoc signed app is not notarized, so macOS blocks it the first time it
+opens. macOS also ties Accessibility and Screen Recording grants to the exact
+ad-hoc build, so people may need to grant them again after each update.
 
-### Staging desktop from main
-
-Tidebreak publishes a packaged **staging** app from `main`, a third desktop
-identity that can run beside both `cargo tauri dev` and an installed
-release. The contract is recorded in
-[decision record 16](decisions/0016-desktop-staging-channel.md).
-
-Staging is a release-profile build with a blue icon, product name
-`Tidebreak [staging]`, identifier `io.brightwave.tidebreak.staging`, keychain
-service `tidebreak.staging`, and the `tidebreak-staging://` scheme. It does
-not share a single-instance lock, app-data directory, updater feed, or
-updater signing key with production. Its versions are
-`0.0.0-staging.{run_number}` — monotonic for the Tauri updater, not
-contiguous, and not a production `vMAJOR.MINOR.PATCH` tag.
-
-The caller is **Publish staging desktop**. It polls `main` hourly rather
-than running on every push. A staging build takes about 45 minutes and every
-build serializes on one publish group, so a per-push trigger could only queue
-merges behind each other, and GitHub cancels the runs it cannot keep pending.
-Each poll compares `main`'s tip against the commit recorded in the hosted
-staging manifest and builds only when a staged path moved between them. To
-build a commit the poll skips, run the workflow by hand with `force`.
-
-The caller derives the version, then invokes the `workflow_call`-only
-**Publish staging desktop build** workflow with `channel: staging`. Staging
-publishes serialize so an in-flight notarization is not cancelled by the next
-build. Production's concurrency group is untouched. Staging artifacts live
-under `https://downloads.brightwave.io/tidebreak/staging/`; the publish step
-refuses any other prefix and will not advance `latest.json` if `main` has
-already moved on.
-
-Staging installs follow `latest.json` only, so hosted history is unused once a
-newer build is current. After each successful publish, and on a weekly
-schedule, `scripts/prune-staging-releases.sh` deletes every recognized
-`tidebreak/staging/releases/v0.0.0-staging.N/` prefix except the live feed
-version and the two newest other builds (keep count 3). Unknown keys,
-`latest.json`, `manifest.json`, and production prefixes are never planned for
-deletion. Before each recursive delete the script re-reads
-`tidebreak/staging/latest.json` and refuses if the prefix is live, so a
-concurrent publish that advances the feed cannot lose the new current build.
-Manual **Prune staging desktop releases** defaults to dry-run; the schedule and
-post-publish paths delete for real. Signed staging GitHub Actions artifacts
-expire after one day.
-
-Create a GitHub environment named `desktop-staging`. Copy the Apple signing
-secrets from `desktop-production`. Do **not** copy
-`TAURI_SIGNING_PRIVATE_KEY` or `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: a
-stolen staging key must not verify on production clients. Staging has its
-own updater keypair. The public half is committed in
-`crates/tidebreak-desktop/tauri.staging.conf.json`. Set the staging
-environment's `TAURI_SIGNING_PRIVATE_KEY` and
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` to that pair's private key and
-password. Point `AWS_RELEASE_ROLE_ARN` at a
-role whose GitHub OIDC subject is
-`repo:brightwave-inc/tidebreak:environment:desktop-staging` and whose S3
-access is only under `tidebreak/staging/`. A role that can also write
-`tidebreak/latest.json` would make a publish-guard bug a production incident.
-
-IAM for that role is configured outside this repository. Publish already needs
-object read/write under the staging prefix. Prune additionally needs:
-
-- `s3:ListBucket` on the downloads bucket, conditioned on
-  `tidebreak/staging/` (delimiter listing of release prefixes and object
-  listing under a prefix about to be removed)
-- `s3:GetObject` on `tidebreak/staging/*` (read `latest.json`; head/get
-  objects while deciding what to remove)
-- `s3:DeleteObject` on `tidebreak/staging/releases/*` only — not on
-  `tidebreak/staging/latest.json` or `tidebreak/staging/manifest.json`
-
-Do not grant `tidebreak/latest.json`, `tidebreak/manifest.json`, or
-`tidebreak/releases/*`. If the bucket has versioning enabled,
-`aws s3 rm --recursive` only removes the current version (or writes a delete
-marker). Prior versions remain and still cost storage until a bucket lifecycle
-rule expires them; that lifecycle is also out of repo.
-
-Before the first public release, protect the environment as appropriate, verify
-all configuration values, and exercise the workflow with the intended first
-tag. The workflow references Apple signing secrets only in the macOS jobs.
-Windows and Linux receive only the Tauri updater key in their artifact
-verification steps, and publishing uses short-lived AWS credentials obtained
-through OIDC.
+The workflow references Apple secrets only in the macOS job. Windows and Linux
+receive only the Tauri updater key in their artifact verification steps, and
+publication uses the workflow's own `GITHUB_TOKEN`. Before the first release,
+consider required reviewers on `desktop-production`.
 
 ### Release CI and cache security
 
-Treat the release workflow as public even while the repository is private:
+The release workflow runs in public:
 
 - Release actions are pinned to immutable commit SHAs. Dependabot is responsible
   for proposing reviewed action updates.
@@ -570,29 +479,25 @@ Treat the release workflow as public even while the repository is private:
   non-prerelease release whose resolved commit is on `main`, and it publishes
   the GitHub Release only after attaching verified assets. It never runs with
   production secrets for a pull request or a manually selected feature branch.
-- The jobs that build and sign check out that immutable commit SHA. The two
-  AWS-credentialed jobs — the hosted-release inspection and the publisher —
-  deliberately check out the dispatching `main` commit instead, so they run the
-  release automation as it exists on `main` rather than as it existed at the
-  tag. The consequence to keep in mind: manifests and hosted metadata are
-  produced by main-tip `scripts/`, so a change to
-  `scripts/create-release-manifests.mjs` alters what a *rerun* of an older tag
-  would generate. The immutability preflight is what stops that from silently
-  overwriting a published release — it requires an existing manifest to match
-  before it can skip rebuilding, and a mismatch fails the run.
-- Apple and Tauri credentials remain environment secrets. The Tauri private key
+- The jobs that build and sign check out that immutable commit SHA. The job
+  that generates the manifests and attaches assets deliberately checks out the
+  dispatching `main` commit instead, so it runs the release automation as it
+  exists on `main` rather than as it existed at the tag. The consequence to
+  keep in mind: manifests are produced by main-tip `scripts/`, so a change to
+  `scripts/create-release-manifests.mjs` alters what a *rerun* of an older
+  draft would generate. A rerun of a published release only verifies it, so it
+  cannot overwrite what shipped.
+- Apple and Tauri credentials stay in GitHub secrets. The Tauri private key
   reaches the configuration-validation precheck that runs before the build, and
   the post-notarization updater-signing and artifact-verification steps. It is
-  not passed to the Tauri build action itself. AWS authentication uses GitHub
-  OIDC, so no long-lived AWS key is stored in GitHub or the source tree.
-  Infrastructure identifiers remain environment variables rather than committed
-  configuration.
+  not passed to the Tauri build action itself. No other credential exists:
+  publication uses the workflow's own `GITHUB_TOKEN`.
 - The Developer ID certificate is imported into an ephemeral runner keychain
   before Tauri invokes the release-only resource-signing hook. The workflow
   verifies the configured identity is available, then deletes the keychain and
   decoded certificate even when the build fails.
-- The credential-free release builds use GitHub OpenID Connect to read and
-  write the shared S3 compiler cache. They compile the exact tag and version
+- The credential-free release builds read and write sccache's GitHub Actions
+  cache. They compile the exact tag and version
   with `--no-bundle`, then save release-specific prepared archives before
   reporting a compile failure. They have no production environment or signing
   secrets. The secret-bearing jobs restore and verify those archives before
@@ -604,13 +509,11 @@ Treat the release workflow as public even while the repository is private:
 - Production artifacts are collected only after code-signing, notarization,
   stapling, and local verification succeed. The temporary App Store Connect key
   is removed even when the build fails.
-- A retry never overwrites an immutable signed release. The preflight requires
-  an existing manifest to match the requested version, tag, commit,
-  publication date, filenames, URLs, sizes, and S3 digest metadata before it
-  can skip rebuilding. The publisher then derives `latest.json` from that
-  authoritative manifest and reruns metadata publication, CloudFront
-  invalidation, and the complete hosted smoke test.
-- Notarization happens once per build: Tauri signs the app and DMG without
+- A retry never overwrites a published release. For a published release the
+  workflow downloads the attached assets, checks every checksum, and checks
+  the published `latest.json` against its `manifest.json`; it uploads nothing.
+- With Apple signing configured, notarization happens once per build: Tauri
+  signs the app and DMG without
   notary credentials, then the workflow submits the signed DMG to Apple's
   notary service, requires an accepted result, and staples that one ticket to
   both the DMG and the identically signed app bundle before artifact
@@ -618,10 +521,10 @@ Treat the release workflow as public even while the repository is private:
   environment only after bundling.
 
 Public source does not eliminate the need for operational controls. Restrict
-who can publish releases and change Actions configuration, protect `main`, and
-consider required reviewers on `desktop-production` before making the
-repository public. Never add a pull-request trigger to the production workflow
-or expose its environment secrets to code from forks.
+who can publish releases and change Actions configuration, protect `main` with
+a ruleset, and consider required reviewers on `desktop-production`. Never add a
+pull-request trigger to the production workflow or expose its secrets to code
+from forks.
 
 ### Third-party notices
 
@@ -730,7 +633,7 @@ that major defines its own upgrade path.
    all releases after 1.0.
 6. Finish the last 0.x release if needed, review the accumulated native draft,
    set its tag to exactly `v1.0.0`, and publish it.
-7. Verify the tag, signed artifacts, hosted manifests, clean installation, 0.x
+7. Verify the tag, signed artifacts, the release's manifests, clean installation, 0.x
    upgrade behavior, and every reported application/protocol version.
 
 After `1.0.0`, breaking changes increment major, features increment minor, and
@@ -742,7 +645,7 @@ the project later commits to maintaining multiple release lines.
 Keep squash merge as the only merge method and set its defaults to **Pull
 request title** and **Pull request body**.
 
-Branch protection on `main` requires the individual CI jobs, not an aggregate
+A branch ruleset on `main` requires the individual CI jobs, not an aggregate
 wrapper — there is none. The required contexts are `change scope`, `semantic PR
 title`, `release policy`, `secret scan (gitleaks)`, `supply-chain advisories
 (cargo-deny)`, `unused deps (cargo-machete)`, `third-party notices`, `rustfmt`,
@@ -776,15 +679,23 @@ break on `main` blocks the desktop release. It typechecks the installer graph
 on `x86_64-pc-windows-msvc`: `tidebreak-desktop` plus the `tidebreak-cli` and
 `tidebreak-host-broker` sidecars. It does not run native Windows tests.
 
-To run that job on an 8-core Windows larger runner (8 vCPU, 32 GB), set the
-repository variable `CI_WINDOWS_RUNNER` to the provisioned x64 label. If you
-omit the variable, the job uses `windows-latest`. Do not point the variable at
-an ARM runner: the lane compiles `x86_64-pc-windows-msvc`.
-
-The x86_64 Windows release compile and packaging jobs use the runner named by
-`RELEASE_WINDOWS_X64_RUNNER`. The repository sets this variable to
-`windows-latest`. Windows ARM64 stays on the native `windows-11-arm` runner
-required by decision 43.
+Every workflow runs on GitHub's standard hosted runners (`ubuntu-latest`,
+`ubuntu-22.04`, the ARM64 Ubuntu and Windows images, `macos-latest`, and
+`windows-latest`), which are free for public repositories. Larger runners are
+billed, so no workflow selects one. Windows ARM64 stays on the native
+`windows-11-arm` runner required by decision 43.
 
 The release-draft workflow uses the built-in `GITHUB_TOKEN`; it does not require
-a personal access token.
+a personal access token or a GitHub App. It drafts the next version from the
+latest published release, so it refuses to run while version tags exist but no
+release is published: publish a baseline release for the newest version tag
+before the first draft.
+
+Also set these once:
+
+- **Pages:** set the source to **GitHub Actions** so the **Publish
+  documentation** workflow can deploy.
+- **Releases:** turn on release immutability, so a published release's tag and
+  assets cannot change.
+- **Security:** turn on private vulnerability reporting, which `SECURITY.md`
+  sends reporters to.

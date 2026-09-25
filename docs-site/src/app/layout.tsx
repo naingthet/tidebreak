@@ -1,14 +1,14 @@
 import { Provider } from '@/components/provider';
 import type { Metadata } from 'next';
 import { getPageImage, source } from '@/lib/source';
-import { PRODUCT_URL } from '@/lib/site';
+import { SITE_ORIGIN } from '@/lib/site';
 import './global.css';
 
 const homePage = source.getPage([]);
 const homeImage = homePage ? getPageImage(homePage).url : '/og/image.png';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(PRODUCT_URL),
+  metadataBase: new URL(SITE_ORIGIN),
   title: {
     default: 'Tidebreak Docs',
     template: '%s — Tidebreak Docs',

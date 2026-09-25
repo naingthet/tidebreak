@@ -2,10 +2,13 @@ name: Publish whisper helper
 
 # Builds and publishes the tidebreak-whisper transcription helper the desktop
 # app downloads on demand (see crates/tidebreak-desktop/src/whisper_install.rs).
-# Run this manually after bumping the version in crates/tidebreak-whisper:
-# the hosted files are immutable, so republishing different bytes under an
-# already-published version fails instead of silently swapping them. Move the
-# desktop's pinned HELPER_VERSION only after this workflow succeeds.
+# Each helper version is its own GitHub release, tagged whisper-helper-vX.Y.Z.
+# It is a prerelease, so it can never become the latest release whose
+# latest.json the desktop updater reads. Run this manually from main after
+# bumping the version in crates/tidebreak-whisper: a published version is
+# immutable, so a second run for the same version fails instead of swapping
+# its files. Move the desktop's pinned HELPER_VERSION only after this
+# workflow succeeds.
 
 on:
   workflow_dispatch:
@@ -20,6 +23,9 @@ concurrency:
 jobs:
   version:
     name: resolve helper version
+    # The updater key signs whatever this workflow builds, so only main's
+    # source is published.
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -29,6 +35,8 @@ jobs:
 
       - name: Read the helper crate version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version="$(cargo metadata --format-version 1 --no-deps \
             --manifest-path crates/tidebreak-whisper/Cargo.toml \
@@ -37,6 +45,11 @@ jobs:
             echo "Unexpected tidebreak-whisper version: $version" >&2
             exit 1
           }
+          # Fail before the builds rather than after them.
+          if gh release view "whisper-helper-v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Helper $version is already published. Bump the tidebreak-whisper version instead." >&2
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   build:
@@ -148,17 +161,16 @@ jobs:
     timeout-minutes: 30
     environment:
       name: desktop-production
-      url: https://downloads.brightwave.io/tidebreak/manifest.json
+      url: https://github.com/${{ github.repository }}/releases/tag/whisper-helper-v${{ needs.version.outputs.version }}
     permissions:
-      contents: read
-      id-token: write
+      contents: write
     env:
       HELPER_VERSION: ${{ needs.version.outputs.version }}
-      AWS_REGION: ${{ vars.DOWNLOADS_AWS_REGION || 'us-east-1' }}
-      AWS_RELEASE_ROLE_ARN: ${{ vars.AWS_RELEASE_ROLE_ARN }}
-      DOWNLOADS_S3_BUCKET: ${{ vars.DOWNLOADS_S3_BUCKET }}
+      HELPER_TAG: whisper-helper-v${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Validate publishing configuration
         env:
@@ -167,8 +179,6 @@ jobs:
         run: |
           missing=()
           for name in \
-            AWS_RELEASE_ROLE_ARN \
-            DOWNLOADS_S3_BUCKET \
             TAURI_SIGNING_PRIVATE_KEY \
             TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
             [[ -n "${!name:-}" ]] || missing+=("$name")
@@ -232,59 +242,30 @@ jobs:
             }
           done < <(find dist -type f ! -name '*.sig' -print0)
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
-        with:
-          role-to-assume: ${{ env.AWS_RELEASE_ROLE_ARN }}
-          role-session-name: tidebreak-whisper-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Upload immutable helper files
+      # `gh release create` uploads every file before it publishes the
+      # release, so nobody can download a partial helper set.
+      - name: Publish the helper release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          prefix="tidebreak/tools/whisper-helper/v$HELPER_VERSION"
-          head_error="$RUNNER_TEMP/helper-head-error"
+          if gh release view "$HELPER_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Helper $HELPER_VERSION is already published. Bump the tidebreak-whisper version instead." >&2
+            exit 1
+          fi
+          gh release create "$HELPER_TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Voice helper $HELPER_VERSION" \
+            --notes "The tidebreak-whisper voice transcription helper that Tidebreak downloads on demand. Each file is signed with the Tauri updater key." \
+            --prerelease
 
-          upload_immutable() {
-            local file="$1"
-            local key="$2"
-            local content_type="$3"
-            local digest remote_digest error
-            digest="$(sha256sum "$file" | cut -d ' ' -f 1)"
-            if remote_digest="$(aws s3api head-object \
-              --bucket "$DOWNLOADS_S3_BUCKET" \
-              --key "$key" \
-              --query Metadata.sha256 \
-              --output text 2>"$head_error")"; then
-              [[ "$remote_digest" = "$digest" ]] || {
-                echo "Refusing to overwrite immutable s3://$DOWNLOADS_S3_BUCKET/$key — bump the tidebreak-whisper version instead" >&2
-                exit 1
-              }
-              echo "Already uploaded with matching digest: $key"
-              return
-            fi
-            error="$(<"$head_error")"
-            case "$error" in
-              *404*|*Not\ Found*) ;;
-              *) printf '%s\n' "$error" >&2; exit 1 ;;
-            esac
-            aws s3 cp "$file" "s3://$DOWNLOADS_S3_BUCKET/$key" \
-              --content-type "$content_type" \
-              --cache-control 'public,max-age=31536000,immutable' \
-              --metadata "sha256=$digest"
-          }
-
-          while IFS= read -r -d '' file; do
-            upload_immutable "$file" "$prefix/${file#dist/}" application/octet-stream
-            upload_immutable "$file.sig" "$prefix/${file#dist/}.sig" text/plain
-          done < <(find dist -type f ! -name '*.sig' -print0)
-
-      - name: Smoke test the hosted helpers
+      - name: Smoke test the published helpers
         run: |
-          base="https://downloads.brightwave.io/tidebreak/tools/whisper-helper/v$HELPER_VERSION"
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$HELPER_TAG"
           while IFS= read -r -d '' file; do
             name="${file#dist/}"
-            curl --fail --silent --show-error --head "$base/$name" >/dev/null
-            curl --fail --silent --show-error "$base/$name.sig" \
-              --output "$RUNNER_TEMP/hosted.sig"
-            cmp "$file.sig" "$RUNNER_TEMP/hosted.sig"
+            curl --fail --silent --show-error --location --head "$base/$name" >/dev/null
+            curl --fail --silent --show-error --location "$base/$name.sig" \
+              --output "$RUNNER_TEMP/published.sig"
+            cmp "$file.sig" "$RUNNER_TEMP/published.sig"
           done < <(find dist -type f ! -name '*.sig' -print0)

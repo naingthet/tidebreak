@@ -1,5 +1,4 @@
-export const PRODUCT_URL = 'https://www.tidebreak.io';
-export const PUBLIC_DOCS_URL = 'https://www.tidebreak.io/docs/';
-export const REPO_URL = 'https://github.com/brightwave-inc/tidebreak';
-export const DOWNLOAD_URL = `${PRODUCT_URL}/download`;
-export const ROADMAP_URL = `${PRODUCT_URL}/roadmap`;
+export const REPO_URL = 'https://github.com/naingthet/tidebreak';
+export const SITE_ORIGIN = 'https://naingthet.github.io';
+export const PUBLIC_DOCS_URL = `${SITE_ORIGIN}/tidebreak/docs/`;
+export const DOWNLOAD_URL = `${REPO_URL}/releases/latest`;

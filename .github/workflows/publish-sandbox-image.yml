@@ -10,8 +10,8 @@ run-name: >-
 # Builds the two sandbox-agent image variants from
 # crates/tidebreak-sandbox-agent/Dockerfile and publishes them to GHCR:
 #
-#   ghcr.io/brightwave-inc/tidebreak-sandbox-agent            (slim)
-#   ghcr.io/brightwave-inc/tidebreak-sandbox-agent-documents  (documents, the
+#   ghcr.io/naingthet/tidebreak-sandbox-agent            (slim)
+#   ghcr.io/naingthet/tidebreak-sandbox-agent-documents  (documents, the
 #                                                             local backend's
 #                                                             default)
 #
@@ -66,9 +66,9 @@ run-name: >-
 # (see `crates/tidebreak-sandbox-agent/e2b/`, whose alias is version-suffixed
 # and so moves with the tag too). The one pin the job deliberately leaves
 # alone is `E2B_TEMPLATE` in `e2b.rs`: that alias only resolves once the
-# template has actually been built and published on E2B, which happens when
-# this job's PR merges and `publish-e2b-template.yml` picks the new alias up.
-# That workflow opens the follow-up PR moving `E2B_TEMPLATE` onto it.
+# template has actually been built and published on E2B, which someone with an
+# E2B account does by hand (see `crates/tidebreak-sandbox-agent/e2b/README.md`)
+# before moving `E2B_TEMPLATE` onto it.
 #
 # Publishing uses the workflow's own GITHUB_TOKEN; no repository secret is
 # consumed. First-time note: a package created by this workflow is private by
@@ -569,8 +569,8 @@ jobs:
           # deliberately does not: that alias only resolves once the template
           # has been built and published on E2B, and bumping the client ahead
           # of the publish would drop every user to the code-interpreter
-          # fallback. Merging this PR triggers `publish-e2b-template.yml`,
-          # which publishes the alias and then proposes that pin itself.
+          # fallback. Publishing the alias is a manual step for whoever owns
+          # an E2B account; see crates/tidebreak-sandbox-agent/e2b/README.md.
           repository = os.environ["DOCUMENTS_REPOSITORY"]
           alias = f"tidebreak-documents-{os.environ['IMAGE_TAG']}".replace(".", "-")
           template_pins = {
@@ -623,9 +623,9 @@ jobs:
           deliberately left alone. That alias resolves only once the template has been
           built and published on E2B; moving the client pin before that happens points
           every E2B user at a template that cannot be resolved and drops them to the
-          \`code-interpreter-v1\` fallback. Merging this PR triggers
-          \`.github/workflows/publish-e2b-template.yml\`, which publishes the new alias
-          and opens the follow-up PR that moves the constant.
+          \`code-interpreter-v1\` fallback. Publishing the new alias on E2B is a manual
+          step for whoever owns an E2B account (see
+          \`crates/tidebreak-sandbox-agent/e2b/README.md\`); move the constant after that.
 
           - Image: \`$DOCUMENTS_REPOSITORY:$IMAGE_TAG\`
           - Digest: \`$DOCUMENTS_DIGEST\`
