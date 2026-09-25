@@ -1253,21 +1253,28 @@ async fn rehome_secrets() -> Result<()> {
 async fn adopt_previous_credentials(config: &Config) -> Result<()> {
     use tidebreak_core::KeychainSecretProvider;
 
-    let (Some(previous), Some(own)) = (
-        profile::previous_keychain_service(config),
-        config.keychain_service.as_deref(),
-    ) else {
+    let previous = profile::previous_keychain_services(config);
+    let Some(own) = config.keychain_service.as_deref() else {
         return Ok(());
     };
-    let adoption = profile::adopt_previous_bundle(
-        &KeychainSecretProvider::with_service(previous),
-        &KeychainSecretProvider::with_service(own),
-    )
-    .await?;
-    if adoption == profile::Adoption::Copied {
+    if previous.is_empty() {
+        return Ok(());
+    }
+    let shared: Vec<KeychainSecretProvider> = previous
+        .iter()
+        .map(|service| KeychainSecretProvider::with_service(*service))
+        .collect();
+    let shared: Vec<&dyn tidebreak_core::SecretProvider> = shared
+        .iter()
+        .map(|provider| provider as &dyn tidebreak_core::SecretProvider)
+        .collect();
+    let adoption =
+        profile::adopt_previous_bundle(&shared, &KeychainSecretProvider::with_service(own)).await?;
+    if let profile::Adoption::Copied(index) = adoption {
         println!(
             "tidebreak: copied the credentials this profile stored in the shared keychain \
-             entry {previous} into its own entry {own}; the shared entry is unchanged"
+             entry {} into its own entry {own}; the shared entry is unchanged",
+            previous[index]
         );
     }
     Ok(())

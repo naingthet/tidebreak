@@ -774,14 +774,21 @@ credential):
 
 ```sh
 # Same data directory the desktop or `serve` owns
-export TIDEBREAK_DATA_DIR="$HOME/Library/Application Support/io.brightwave.tidebreak"
+export TIDEBREAK_DATA_DIR="$HOME/Library/Application Support/io.github.naingthet.tidebreak"
 tidebreak --attach provider list
 tidebreak -p "what changed today?" --attach
 ```
 
 The dev app, which a debug build of the CLI uses, keeps its data in
-`io.brightwave.tidebreak.dev`. With `TIDEBREAK_DATA_DIR` unset, `--attach`
+`io.github.naingthet.tidebreak.dev`. With `TIDEBREAK_DATA_DIR` unset, `--attach`
 reads the app's own `listen.json`, so it fails when the app is not running.
+
+Versions before the app identity changed kept that data under
+`io.brightwave.tidebreak` instead. A command that uses the app's data moves it
+to the new folder first, the way the app does, unless an earlier app is still
+running on it: then the command attaches to that app where it is. If
+`TIDEBREAK_DATA_DIR` still names the old folder after the move, the command
+uses the new one and says so; update the variable.
 `--attach`, `--server`, and `--embed` conflict; pick one.
 
 `--attach` believes a `listen.json` only while a live process holds the lock
@@ -991,5 +998,5 @@ cargo run -p tidebreak-cli -- <args>
 ```
 
 A debug build, such as `cargo run -p tidebreak-cli --`, uses the dev app's
-profile (`io.brightwave.tidebreak.dev`) in place of the installed app's. A
+profile (`io.github.naingthet.tidebreak.dev`) in place of the installed app's. A
 release build uses the installed app's profile.

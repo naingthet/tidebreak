@@ -195,7 +195,7 @@ struct CursorDecoration {
 }
 
 pub(super) const CHROME_CURSOR_SCRIPT: &str = r##"(payload => {
-  const key = Symbol.for("io.brightwave.tidebreak.chrome.agent-cursor");
+  const key = Symbol.for("io.github.naingthet.tidebreak.chrome.agent-cursor");
   const prior = globalThis[key];
   if (payload.clear) {
     if (prior && prior.id === payload.id) prior.clear();

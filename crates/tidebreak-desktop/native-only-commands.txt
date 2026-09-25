@@ -109,6 +109,8 @@ answer_quit_prompt: carries the person's answer to the shell, which alone can st
 restart_app: quits through that same prompt and opens the app again, so macOS applies a Screen Recording grant it only gives to a process started after it; only the native shell can end and relaunch itself.
 unclean_exit_notice: reports that the previous desktop process ended without its exit handler, which only the shell's own run marker records.
 dismiss_unclean_exit_notice: clears that notice for this run.
+data_move_notice: reports that the shell moved this install's data from the previous app identity before the server started, which only the shell's move record says.
+dismiss_data_move_notice: marks that notice read in the move record, so it shows once.
 save_diagnostics_report: writes the diagnostics export to a file chosen in the native save dialog.
 problem_report_facts: reads this computer's operating system version and architecture for a bug report's prefill; only the native shell knows the machine it runs on.
 reveal_logs_directory: opens this computer's logs folder in its file manager; a headless server cannot open desktop UI.

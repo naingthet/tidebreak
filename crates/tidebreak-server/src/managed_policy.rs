@@ -459,6 +459,25 @@ fn platform_source_for_bundle_id(_bundle_id: Option<&str>) -> Arc<dyn OsPolicySo
     Arc::new(NoOsPolicy)
 }
 
+/// The channel plists for `bundle_id`, in precedence order: the user channel,
+/// then the device channel. A bundle id that replaced an earlier one
+/// (decision 103) reads the earlier domain's channels after its own, so an
+/// organization's policy for the earlier domain still applies after the
+/// update, key by key, until the organization deploys it for the current one.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn channel_paths(root: &Path, user: Option<&str>, bundle_id: &str) -> Vec<PathBuf> {
+    let previous =
+        crate::identity_move::identity_change(bundle_id).map(|change| change.previous_identifier);
+    let mut paths = Vec::new();
+    for domain in std::iter::once(bundle_id).chain(previous) {
+        if let Some(user) = user {
+            paths.push(root.join(user).join(format!("{domain}.plist")));
+        }
+        paths.push(root.join(format!("{domain}.plist")));
+    }
+    paths
+}
+
 /// Managed (MDM-forced) preferences for the embedding's bundle id.
 ///
 /// `cfprefsd` materializes forced domains as plists under
@@ -481,25 +500,26 @@ pub struct ManagedPreferencesSource {
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 impl ManagedPreferencesSource {
     pub fn for_bundle_id(bundle_id: &str) -> Self {
-        let root = PathBuf::from("/Library/Managed Preferences");
-        let mut paths = Vec::new();
         // The user channel is scoped by the *effective* uid's account name,
         // resolved from the user database — never `$USER`, which any launcher
         // controls and could point at another account's channel or, via path
         // separators, outside the managed-preferences tree entirely.
-        if let Some(user) = effective_user_name() {
-            if is_safe_path_component(&user) {
-                paths.push(root.join(&user).join(format!("{bundle_id}.plist")));
-            } else {
+        let user = effective_user_name().filter(|user| {
+            let safe = is_safe_path_component(user);
+            if !safe {
                 tracing::warn!(
                     "resolved account name {user:?} is not a safe path component; \
                      skipping the user-scoped managed-preferences channel"
                 );
             }
-        }
-        paths.push(root.join(format!("{bundle_id}.plist")));
+            safe
+        });
         Self {
-            paths,
+            paths: channel_paths(
+                Path::new("/Library/Managed Preferences"),
+                user.as_deref(),
+                bundle_id,
+            ),
             trusted_owner: 0,
         }
     }
@@ -1978,6 +1998,34 @@ mod tests {
         assert!(policy.managed && policy.misconfigured);
         assert_eq!(policy.source, ManagedPolicySource::Os);
         assert!(policy.gateway_url.is_none());
+    }
+
+    /// An organization's policy for the domain Tidebreak used before its
+    /// identity changed still applies, after the current domain's.
+    #[test]
+    fn the_previous_identitys_domain_is_read_after_the_current_one() {
+        let root = Path::new("/Library/Managed Preferences");
+        assert_eq!(
+            channel_paths(root, Some("alex"), "io.github.naingthet.tidebreak"),
+            [
+                root.join("alex/io.github.naingthet.tidebreak.plist"),
+                root.join("io.github.naingthet.tidebreak.plist"),
+                root.join("alex/io.brightwave.tidebreak.plist"),
+                root.join("io.brightwave.tidebreak.plist"),
+            ]
+        );
+        assert_eq!(
+            channel_paths(root, None, "io.github.naingthet.tidebreak.dev"),
+            [
+                root.join("io.github.naingthet.tidebreak.dev.plist"),
+                root.join("io.brightwave.tidebreak.dev.plist"),
+            ]
+        );
+        // A domain with no earlier one reads only itself.
+        assert_eq!(
+            channel_paths(root, None, "io.brightwave.tidebreak"),
+            [root.join("io.brightwave.tidebreak.plist")]
+        );
     }
 
     /// The guard between the user database and the filesystem join: no

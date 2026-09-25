@@ -19,7 +19,11 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: mocks.listen,
 }));
 
-import { useQuitPrompt, useUncleanExitNotice } from "./desktopLifecycle";
+import {
+  useDataMoveNotice,
+  useQuitPrompt,
+  useUncleanExitNotice,
+} from "./desktopLifecycle";
 
 const IDLE: QuitPromptUpdate = {
   request: 0,
@@ -201,6 +205,43 @@ describe("useUncleanExitNotice", () => {
         error: "Could not build the diagnostics report",
       }),
     );
+    unmount();
+  });
+});
+
+describe("useDataMoveNotice", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** The shell says once that it moved the data, and dismissing it tells the
+   * shell never to say it again. */
+  it("shows the move once and marks it read on dismiss", async () => {
+    const move = {
+      dataDir:
+        "/Users/alex/Library/Application Support/io.github.naingthet.tidebreak",
+      credentialsKept: false,
+      macos: true,
+    };
+    mocks.invoke.mockImplementation((command: string) =>
+      Promise.resolve(command === "data_move_notice" ? move : undefined),
+    );
+    const { result, unmount } = renderHook(() => useDataMoveNotice());
+    await waitFor(() => expect(result.current.notice).toEqual(move));
+
+    act(() => result.current.dismiss());
+    expect(result.current.notice).toBeNull();
+    expect(mocks.invoke).toHaveBeenCalledWith("dismiss_data_move_notice");
+    unmount();
+  });
+
+  it("shows nothing when nothing moved", async () => {
+    mocks.invoke.mockImplementation(() => Promise.resolve(null));
+    const { result, unmount } = renderHook(() => useDataMoveNotice());
+    await waitFor(() =>
+      expect(mocks.invoke).toHaveBeenCalledWith("data_move_notice"),
+    );
+    expect(result.current.notice).toBeNull();
     unmount();
   });
 });

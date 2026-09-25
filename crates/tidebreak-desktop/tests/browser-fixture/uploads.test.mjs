@@ -22,7 +22,7 @@ assert.ok(uploadMatch, "the isolated browser upload script must be present");
 assert.ok(identityStoreMatch, "the upload resolver must use private target identities");
 
 const targetIdentityStoreKey = Symbol.for(
-  "io.brightwave.tidebreak.browser.target-identities",
+  "io.github.naingthet.tidebreak.browser.target-identities",
 );
 const targetIdentityStore = new WeakMap();
 Object.defineProperty(globalThis, targetIdentityStoreKey, {

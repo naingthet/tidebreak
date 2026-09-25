@@ -49,8 +49,12 @@ usable gateway.
 Deploy a configuration profile that forces a preference for the app's bundle
 identifier:
 
-- Domain: `io.brightwave.tidebreak` (release builds; debug builds read
-  `io.brightwave.tidebreak.dev`)
+- Domain: `io.github.naingthet.tidebreak` (release builds; debug builds read
+  `io.github.naingthet.tidebreak.dev`). Tidebreak also reads the domain from
+  before its identity changed, `io.brightwave.tidebreak` (debug:
+  `io.brightwave.tidebreak.dev`), after the current one, so a profile deployed
+  for it keeps applying until you deploy it for the new domain. A key forced in
+  the new domain wins.
 - Key: `GatewayURL` (string)
 - Key: `AllowLocalMcpServers` (boolean, optional; also accepted as the
   string `true`/`false`)

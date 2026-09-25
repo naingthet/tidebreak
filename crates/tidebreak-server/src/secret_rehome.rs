@@ -123,7 +123,7 @@ pub async fn stored_secret_keys(store: &dyn Store) -> Result<Vec<String>> {
 
 /// The fixed keys features store credentials under, independent of profile
 /// state.
-fn static_secret_keys() -> Vec<String> {
+pub(crate) fn static_secret_keys() -> Vec<String> {
     let mut keys: Vec<String> = ProviderKind::ALL
         .iter()
         .map(|kind| kind.credential_key())

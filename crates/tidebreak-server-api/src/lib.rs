@@ -33,8 +33,8 @@ pub(crate) use core::{
 };
 pub use core::{
     boot_failure, code_execution, connectors, consent, deprovision_provisioned_gateway,
-    deprovision_target, ensure_home_dir, host_folders, listen_endpoint, logging, media_type,
-    openapi_catalog, output_files, profile_data, register_pending_pairing,
+    deprovision_target, ensure_home_dir, host_folders, identity_move, listen_endpoint, logging,
+    media_type, openapi_catalog, output_files, profile_data, register_pending_pairing,
     register_replacing_pairing, rehome_configured_secrets, rest_executor, sandbox_container_run,
     sandbox_docker, secret_rehome, voice_transcription, web_search, workspace_config, AppState,
     BrowserChannelBinding, BrowserRuntime, BrowserRuntimeError, BrowserRuntimeScope,

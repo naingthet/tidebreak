@@ -22,7 +22,7 @@ test("production publishes from this repository's GitHub releases", () => {
   );
   assert.equal(production.baseUrl, PRODUCTION_BASE_URL);
   assert.equal(production.updaterEndpoint, PRODUCTION_UPDATER_ENDPOINT);
-  assert.equal(production.identifier, "io.brightwave.tidebreak");
+  assert.equal(production.identifier, "io.github.naingthet.tidebreak");
   assert.equal(production.environment, "desktop-production");
   assert.deepEqual(Object.keys(DESKTOP_CHANNELS), ["production"]);
   assert.throws(() => desktopChannel("staging"), /unknown desktop channel/);

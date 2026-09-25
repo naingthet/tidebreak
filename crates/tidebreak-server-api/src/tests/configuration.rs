@@ -5059,7 +5059,7 @@ async fn standard_manifests_report_ignored_fields_and_carry_our_extension() {
           \"description\": \"Reporting skills.\", \"future-field\": [1, 2], \
           \"extensions\": {{\
             \"com.example.other-client\": {{\"whatever\": true}}, \
-            \"io.brightwave.tidebreak\": {{\
+            \"io.github.naingthet.tidebreak\": {{\
               \"category\": \"data\", \
               \"router-preamble\": \"Pick by the reporting cadence the user asked for.\"}}}}}}"
     );

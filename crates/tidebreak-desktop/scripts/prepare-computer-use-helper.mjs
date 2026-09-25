@@ -55,7 +55,7 @@ export function stageComputerUseHelper(
         ?? identities.match(/"(Developer ID Application: [^"]+)"/)?.[1];
     }
     if (identity) {
-      run("codesign", ["--force", "--sign", identity, "--identifier", "io.brightwave.tidebreak.cu-helper.dev", resource], { stdio: "inherit" });
+      run("codesign", ["--force", "--sign", identity, "--identifier", "io.github.naingthet.tidebreak.cu-helper.dev", resource], { stdio: "inherit" });
       run("codesign", ["--verify", "--strict", resource], { stdio: "inherit" });
     } else {
       console.warn("Computer-use helper has no stable development signing identity; macOS may ask for permissions after each rebuild.");

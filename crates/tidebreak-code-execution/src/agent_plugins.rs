@@ -20,12 +20,13 @@
 //!   describe.
 //!
 //! Client-specific data rides in `extensions` under reverse-domain
-//! namespaces. Tidebreak reads [`TIDEBREAK_EXTENSION_NAMESPACE`] and ignores
-//! every other namespace without inspecting it, which is what the
-//! specification requires of a client that does not implement one. Because
-//! that namespace is ours, a malformed value inside it is reported and ignored
-//! rather than fatal: the plugin still describes itself correctly to every
-//! other client.
+//! namespaces. Tidebreak reads [`TIDEBREAK_EXTENSION_NAMESPACE`], or
+//! [`PREVIOUS_TIDEBREAK_EXTENSION_NAMESPACE`] in a package published before
+//! the app identity changed, and ignores every other namespace without
+//! inspecting it, which is what the specification requires of a client that
+//! does not implement one. Because that namespace is ours, a malformed value
+//! inside it is reported and ignored rather than fatal: the plugin still
+//! describes itself correctly to every other client.
 
 use crate::plugins::{is_valid_plugin_router_preamble, PluginCategory};
 
@@ -42,8 +43,14 @@ pub const AGENT_PLUGIN_SPEC_VERSION: &str = "1.0.0";
 pub const AGENT_PLUGIN_SCHEMA_ID: &str =
     "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json";
 
-/// The reverse-domain namespace Tidebreak's own manifest data lives under.
-pub const TIDEBREAK_EXTENSION_NAMESPACE: &str = "io.brightwave.tidebreak";
+/// The reverse-domain namespace Tidebreak's own manifest data lives under:
+/// the app's identifier (decision 103).
+pub const TIDEBREAK_EXTENSION_NAMESPACE: &str = "io.github.naingthet.tidebreak";
+
+/// The namespace from before the app identity changed. A package published
+/// then keeps its Tidebreak data here, so it is read when the current
+/// namespace is absent.
+pub const PREVIOUS_TIDEBREAK_EXTENSION_NAMESPACE: &str = "io.brightwave.tidebreak";
 
 const MAX_NAME_CHARS: usize = 64;
 
@@ -239,12 +246,20 @@ pub fn parse_agent_plugin_manifest(
             // Every other namespace is ignored without inspecting it, which
             // is exactly what the specification asks of a client that does
             // not implement one.
-            if let Some(ours) = extensions
-                .get(TIDEBREAK_EXTENSION_NAMESPACE)
-                .and_then(serde_json::Value::as_object)
-            {
+            let ours = [
+                TIDEBREAK_EXTENSION_NAMESPACE,
+                PREVIOUS_TIDEBREAK_EXTENSION_NAMESPACE,
+            ]
+            .into_iter()
+            .find_map(|namespace| {
+                extensions
+                    .get(namespace)
+                    .and_then(serde_json::Value::as_object)
+                    .map(|ours| (namespace, ours))
+            });
+            if let Some((namespace, ours)) = ours {
                 for (key, value) in ours {
-                    let field = format!("extensions.{TIDEBREAK_EXTENSION_NAMESPACE}.{key}");
+                    let field = format!("extensions.{namespace}.{key}");
                     match key.as_str() {
                         "category" => match value.as_str().and_then(PluginCategory::parse) {
                             Some(parsed) => category = Some(parsed),
@@ -976,6 +991,33 @@ mod tests {
         assert_eq!(parsed.manifest.category, None);
         assert_eq!(parsed.manifest.router_preamble, None);
         assert_eq!(parsed.ignored.len(), 3);
+    }
+
+    /// Contract: a package published before the app identity changed keeps
+    /// its category, and the current namespace wins where both are present.
+    #[test]
+    fn a_package_under_the_previous_namespace_still_loads_its_data() {
+        let parsed = parse_agent_plugin_manifest(&manifest(&format!(
+            ", \"extensions\": {{\"{PREVIOUS_TIDEBREAK_EXTENSION_NAMESPACE}\": {{\
+               \"category\": \"data\"}}}}"
+        )))
+        .unwrap();
+        assert_eq!(parsed.manifest.category, Some(PluginCategory::Data));
+
+        let parsed = parse_agent_plugin_manifest(&manifest(&format!(
+            ", \"extensions\": {{\
+               \"{PREVIOUS_TIDEBREAK_EXTENSION_NAMESPACE}\": {{\"category\": \"data\"}}, \
+               \"{TIDEBREAK_EXTENSION_NAMESPACE}\": {{\"category\": \"visualization\", \"future\": 1}}}}"
+        )))
+        .unwrap();
+        assert_eq!(
+            parsed.manifest.category,
+            Some(PluginCategory::Visualization)
+        );
+        assert_eq!(
+            parsed.ignored[0].field,
+            format!("extensions.{TIDEBREAK_EXTENSION_NAMESPACE}.future")
+        );
     }
 
     fn mcp(servers: &str) -> String {

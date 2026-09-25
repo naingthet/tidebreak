@@ -4957,13 +4957,13 @@ const SENSITIVE_FIELD_POLICY: &str = r##"
 const BROWSER_GHOST_CURSOR_SCRIPT: &str = r#"
 (() => {
   const payload = __PAYLOAD__;
-  const key = Symbol.for("io.brightwave.tidebreak.browser.ghost-cursor");
+  const key = Symbol.for("io.github.naingthet.tidebreak.browser.ghost-cursor");
   const prior = globalThis[key];
   if (payload.clear) {
     if (prior && (!payload.id || prior.id === payload.id)) prior.clear();
     return JSON.stringify("cleared");
   }
-  if (globalThis[Symbol.for("io.brightwave.tidebreak.browser.observed-document")] !== payload.snapshotMarker
+  if (globalThis[Symbol.for("io.github.naingthet.tidebreak.browser.observed-document")] !== payload.snapshotMarker
     || payload.url !== String(location.href)
     || payload.viewportWidth !== window.innerWidth
     || payload.viewportHeight !== window.innerHeight) return JSON.stringify("stale");
@@ -5010,7 +5010,7 @@ const BROWSER_GHOST_CURSOR_SCRIPT: &str = r#"
   };
   globalThis[key] = state;
   const checkDocument = () => {
-    if (globalThis[Symbol.for("io.brightwave.tidebreak.browser.observed-document")] !== payload.snapshotMarker
+    if (globalThis[Symbol.for("io.github.naingthet.tidebreak.browser.observed-document")] !== payload.snapshotMarker
       || String(location.href) !== payload.url
       || window.innerWidth !== payload.viewportWidth
       || window.innerHeight !== payload.viewportHeight) { state.clear(); return; }
@@ -5024,7 +5024,7 @@ const BROWSER_GHOST_CURSOR_SCRIPT: &str = r#"
 
 const TARGET_IDENTITY_STORE_SCRIPT: &str = r#"
   const tidebreakTargetIdentityStore = (() => {
-    const key = Symbol.for("io.brightwave.tidebreak.browser.target-identities");
+    const key = Symbol.for("io.github.naingthet.tidebreak.browser.target-identities");
     const existing = globalThis[key];
     if (existing instanceof WeakMap) return existing;
     const store = new WeakMap();
@@ -5114,8 +5114,8 @@ const SNAPSHOT_SCRIPT: &str = r#"
 (() => {
   const MAX_NODES = __MAX_NODES__;
   const MARKER = "__MARKER__";
-  globalThis[Symbol.for("io.brightwave.tidebreak.browser.ghost-cursor")]?.clear();
-  globalThis[Symbol.for("io.brightwave.tidebreak.browser.observed-document")] = MARKER;
+  globalThis[Symbol.for("io.github.naingthet.tidebreak.browser.ghost-cursor")]?.clear();
+  globalThis[Symbol.for("io.github.naingthet.tidebreak.browser.observed-document")] = MARKER;
   const TEXT_LIMIT = 240;
   const nodes = [];
   const frames = [];

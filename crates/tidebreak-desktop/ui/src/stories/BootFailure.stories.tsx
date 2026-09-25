@@ -6,7 +6,7 @@ import { BootFailure } from "@/BootFailure";
 import type { BootFailureKind } from "@/bootRecovery";
 
 const DATA_DIR =
-  "/Users/alex/Library/Application Support/io.brightwave.tidebreak";
+  "/Users/alex/Library/Application Support/io.github.naingthet.tidebreak";
 
 const LOCAL = {
   attachment: "local",

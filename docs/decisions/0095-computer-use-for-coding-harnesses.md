@@ -1,6 +1,8 @@
 # 95. Computer use for coding harnesses
 
-- Status: Accepted
+- Status: Accepted (the blocklist's app family amended by
+  [decision 103](0103-tidebreak-runs-under-its-own-app-identity.md): it
+  reserves `io.github.naingthet.tidebreak` and keeps `io.brightwave.tidebreak`)
 - Date: 2026-09-08
 - Delivery: #3245
 - Supersedes the foreground-only, development-app blocklist, and screenshot-redaction limits in decisions 13 and 54.

@@ -118,9 +118,9 @@ Tidebreak owns one application data directory, created on first launch:
 
 | Platform | Path |
 | --- | --- |
-| macOS | `~/Library/Application Support/io.brightwave.tidebreak` |
-| Windows | `%APPDATA%\io.brightwave.tidebreak` |
-| Linux | `~/.local/share/io.brightwave.tidebreak` |
+| macOS | `~/Library/Application Support/io.github.naingthet.tidebreak` |
+| Windows | `%APPDATA%\io.github.naingthet.tidebreak` |
+| Linux | `~/.local/share/io.github.naingthet.tidebreak` |
 
 Inside it:
 
@@ -135,6 +135,7 @@ Inside it:
 | `listen.json` | Loopback URL and bearer for `--attach` while the server is running |
 | `tools/` | On-demand installs: whisper helper, Node, LibreOffice, coding engines |
 | `tidebreak.lock` | Proof that one process owns this directory |
+| `identity-move.json` | Where the data came from, if Tidebreak moved it from its earlier folder |
 
 Code worktrees live outside that directory, by default under
 `~/Tidebreak/workspaces`. You can change the root in settings; existing
@@ -149,9 +150,36 @@ export too: see [`tidebreak data`](/headless#data).
 
 Provider API keys are **not** in the application data directory. They go to
 your OS credential store — Login Keychain on macOS, Credential Manager on
-Windows, or Secret Service on Linux — under the service name `tidebreak`. A
-separate CLI profile, named with `TIDEBREAK_DATA_DIR`, keeps its keys under a
-service of its own, `tidebreak.profile.<id>`.
+Windows, or Secret Service on Linux — under the service name
+`io.github.naingthet.tidebreak`. A separate CLI profile, named with
+`TIDEBREAK_DATA_DIR`, keeps its keys under a service of its own,
+`tidebreak.profile.<id>`.
+
+### Moving from an earlier version
+
+Versions before the app identity changed kept the same data under
+`io.brightwave.tidebreak` instead: in
+`~/Library/Application Support/io.brightwave.tidebreak`,
+`%APPDATA%\io.brightwave.tidebreak`, or
+`~/.local/share/io.brightwave.tidebreak`, with keys under the service
+`tidebreak`. The first time a newer Tidebreak opens, it moves that folder to
+the new location, along with the window's own storage and your keys, before
+it opens anything. It tells you once when it has.
+
+- If an earlier Tidebreak is still running, the new one opens nothing and
+  asks you to quit the other one first.
+- The old folder's path becomes a link to the new folder, so anything that
+  recorded the old path, such as a worktree from before version 0.59, still
+  finds it.
+- If both folders already hold data, Tidebreak uses the new one and leaves
+  the old one as it is. Nothing is merged or overwritten.
+- On macOS, the moved app asks again for Accessibility and Screen Recording,
+  and macOS may ask whether Tidebreak can use your keychain. If you decline
+  that, your keys stay in the `tidebreak` entry and you sign in again.
+
+The `tidebreak` command line does the same move when it is the first to run.
+While an earlier Tidebreak is still running, it uses that app's folder as it
+is.
 
 <Callout>
 Desktop upgrades from v0.61.0 onward keep this data. Tidebreak upgrades the
@@ -190,26 +218,35 @@ the system dialog says so when it finds any.
 On macOS:
 
 1. Drag `/Applications/Tidebreak.app` to the Trash.
-2. Delete `~/Library/Application Support/io.brightwave.tidebreak`.
+2. Delete `~/Library/Application Support/io.github.naingthet.tidebreak`, and
+   `~/Library/WebKit/io.github.naingthet.tidebreak`, which holds the window's
+   own storage.
 3. Delete `~/Tidebreak/workspaces` if you used code mode and do not need those
    worktrees.
-4. Remove keychain items for the service `tidebreak`, and for any
-   `tidebreak.profile.<id>` services a separate CLI profile created. In
-   Keychain Access, search for `tidebreak`: that finds both kinds.
-   `security find-generic-password -s tidebreak` matches the exact service
-   name, so it finds only the app's item.
+4. Remove keychain items for the service `io.github.naingthet.tidebreak`, and
+   for any `tidebreak.profile.<id>` services a separate CLI profile created.
+   In Keychain Access, search for `tidebreak`: that finds both kinds.
+   `security find-generic-password -s io.github.naingthet.tidebreak` matches
+   the exact service name, so it finds only the app's item.
 
 On Windows, remove the app from **Settings → Apps**, then delete
-`%APPDATA%\io.brightwave.tidebreak` and any worktrees you created. Credentials
-live in Credential Manager under `tidebreak`.
+`%APPDATA%\io.github.naingthet.tidebreak`,
+`%LOCALAPPDATA%\io.github.naingthet.tidebreak`, and any worktrees you
+created. Credentials live in Credential Manager under
+`io.github.naingthet.tidebreak`.
 
 On Linux, remove the AppImage or Debian package, then delete
-`~/.local/share/io.brightwave.tidebreak` and any worktrees. Credentials live
-in Secret Service under `tidebreak`.
+`~/.local/share/io.github.naingthet.tidebreak`,
+`~/.config/io.github.naingthet.tidebreak`, and any worktrees. Credentials live
+in Secret Service under `io.github.naingthet.tidebreak`.
 
-A debug build uses `io.brightwave.tidebreak.dev` instead of
-`io.brightwave.tidebreak`. Do not delete a release profile if you only meant
-to wipe a development run.
+If an earlier version left a folder or a key under `io.brightwave.tidebreak`
+or `tidebreak`, delete those the same way. After a move, the old folder's
+path is only a link to the new one.
+
+A debug build uses `io.github.naingthet.tidebreak.dev` instead of
+`io.github.naingthet.tidebreak`. Do not delete a release profile if you only
+meant to wipe a development run.
 
 ## Running it headless
 

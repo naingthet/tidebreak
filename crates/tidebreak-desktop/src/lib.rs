@@ -61,6 +61,7 @@ mod deliverables;
 mod documents;
 mod host_access;
 mod host_authority;
+mod identity_move;
 mod image_attachments;
 mod menu;
 mod native_cursor_overlay;
@@ -1165,6 +1166,19 @@ pub fn run() {
         context.package_info_mut().name = channel.product_name().into();
     }
 
+    // Carry an install from the identity earlier builds ran under before
+    // anything opens a folder under this one: the server's database, the
+    // webview's storage, and the window's saved state all live in folders the
+    // identifier names (decision 103). While an older build still holds that
+    // data, nothing starts, and a dialog says why.
+    let moved = match identity_move::prepare(channel) {
+        identity_move::Prepared::Ready(report) => report,
+        identity_move::Prepared::Blocked(blocked) => {
+            identity_move::run_blocked(context, blocked);
+            return;
+        }
+    };
+
     let (info_tx, info_rx) = watch::channel(None);
     let state = Arc::new(AppState { info_rx });
     // Filled once the embedded server binds; the deep-link pairing handler
@@ -1275,6 +1289,8 @@ pub fn run() {
             quit::restart_app,
             unclean_exit::unclean_exit_notice,
             unclean_exit::dismiss_unclean_exit_notice,
+            identity_move::data_move_notice,
+            identity_move::dismiss_data_move_notice,
             unclean_exit::save_diagnostics_report
         ])
         .on_menu_event(menu::handle_menu_event)
@@ -1297,6 +1313,9 @@ pub fn run() {
             // events land in `logs/tidebreak.log` under the profile data dir
             // (stderr-only if that file cannot be created).
             tidebreak_server::logging::init_logging(&data);
+            for line in moved.log_lines() {
+                tracing::info!("identity move: {line}");
+            }
             // Panics now also land in the profile's boot failure log.
             tidebreak_server::logging::install_panic_hook(Some(&data));
             // Notice a run that ended without its exit handler, then mark this
@@ -1319,7 +1338,7 @@ pub fn run() {
             // command consults it to decide whether it may act at all.
             let attachment = Arc::new(remote::RemoteAttachment::new(
                 &data,
-                channel::current().keychain_service(),
+                Some(channel::current().keychain_service()),
             ));
             let host_access = host_access::HostAccess::new(
                 handle.clone(),
@@ -1486,12 +1505,10 @@ async fn bind_server(
     // The effective identifier — including the debug and staging overrides —
     // keys the macOS managed-preferences (MDM) domain the server reads policy from.
     config.bundle_id = Some(app.config().identifier.clone());
-    // Non-production channels keep their own keychain service, completing the
-    // identifier and app-data split: they must not share mutable secret state
-    // with each other or with an installed release.
-    if let Some(service) = channel::current().keychain_service() {
-        config.keychain_service = Some(service.into());
-    }
+    // Each channel keeps its own keychain service, completing the identifier
+    // and app-data split: channels must not share mutable secret state with
+    // each other, or with a build that ran under an earlier identifier.
+    config.keychain_service = Some(channel::current().keychain_service().into());
     let folder_grants = Arc::new(host_access::DesktopExecFolderGrantResolver::new(
         app.clone(),
     ));

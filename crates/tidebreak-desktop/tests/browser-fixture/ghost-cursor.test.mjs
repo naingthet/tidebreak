@@ -6,7 +6,7 @@ import vm from "node:vm";
 const source = await readFile(new URL("../../src/browser_semantics.rs", import.meta.url), "utf8");
 const match = source.match(/const BROWSER_GHOST_CURSOR_SCRIPT: &str = r#"([\s\S]*?)"#;/);
 assert.ok(match, "the native page decoration must be available");
-const markerKey = Symbol.for("io.brightwave.tidebreak.browser.observed-document");
+const markerKey = Symbol.for("io.github.naingthet.tidebreak.browser.observed-document");
 
 function fixture() {
   const nodes = [];
@@ -40,7 +40,7 @@ function fixture() {
     url: context.location.href, point: { x: 100, y: 120 },
     viewportWidth: 800, viewportHeight: 600, visibleMillis: 1200, action: "click", ...changes,
   })), context));
-  const current = () => vm.runInContext('globalThis[Symbol.for("io.brightwave.tidebreak.browser.ghost-cursor")]', context);
+  const current = () => vm.runInContext('globalThis[Symbol.for("io.github.naingthet.tidebreak.browser.ghost-cursor")]', context);
   return { context, nodes, timers, frames, show, current };
 }
 

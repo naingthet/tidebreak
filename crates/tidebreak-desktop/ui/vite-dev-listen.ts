@@ -4,7 +4,7 @@ import path from "node:path";
 import type { Plugin } from "vite";
 
 /** Same identifier the debug desktop writes `listen.json` under. */
-export const DEV_APP_IDENTIFIER = "io.brightwave.tidebreak.dev";
+export const DEV_APP_IDENTIFIER = "io.github.naingthet.tidebreak.dev";
 
 export const LISTEN_DEV_PATH = "/__tidebreak/listen";
 

@@ -147,6 +147,48 @@ export async function restartTidebreak(): Promise<void> {
   await invoke("restart_app");
 }
 
+/** Where Tidebreak moved its data from the folder earlier versions used. */
+export type DataMove = {
+  /** The data folder now. */
+  dataDir: string;
+  /** The saved keys stayed behind, so the person signs in again. */
+  credentialsKept: boolean;
+  /** macOS asks again for its permissions and for keychain access. */
+  macos: boolean;
+};
+
+/**
+ * The one-time notice that Tidebreak moved its data to a new folder, until
+ * the person dismisses it. Dismissing marks it read in the shell, so it never
+ * shows again.
+ */
+export function useDataMoveNotice(): {
+  notice: DataMove | null;
+  dismiss: () => void;
+} {
+  const [notice, setNotice] = useState<DataMove | null>(null);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    let cancelled = false;
+    void invoke<DataMove | null>("data_move_notice")
+      .then((value) => {
+        if (!cancelled) setNotice(value ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismiss = useCallback(() => {
+    setNotice(null);
+    void invoke("dismiss_data_move_notice").catch(() => undefined);
+  }, []);
+
+  return { notice, dismiss };
+}
+
 /** The previous run of the app, which ended without a clean exit. */
 export type UncleanExit = {
   startedAt: string | null;

@@ -3,11 +3,13 @@
 //! The three identities must not share a bundle id, product name, keychain
 //! service, or deep-link scheme. Debug is selected by the build profile;
 //! staging is selected by `TIDEBREAK_CHANNEL=staging` on a release build.
-//! See [`docs/decisions/0016-desktop-staging-channel.md`].
+//! See [`docs/decisions/0016-desktop-staging-channel.md`], and
+//! [`docs/decisions/0103-tidebreak-runs-under-its-own-app-identity.md`] for
+//! the identifiers and the move from the ones before them.
 
-pub const PRODUCTION_IDENTIFIER: &str = "io.brightwave.tidebreak";
-pub const DEV_IDENTIFIER: &str = "io.brightwave.tidebreak.dev";
-pub const STAGING_IDENTIFIER: &str = "io.brightwave.tidebreak.staging";
+pub const PRODUCTION_IDENTIFIER: &str = "io.github.naingthet.tidebreak";
+pub const DEV_IDENTIFIER: &str = "io.github.naingthet.tidebreak.dev";
+pub const STAGING_IDENTIFIER: &str = "io.github.naingthet.tidebreak.staging";
 
 pub const PRODUCTION_PRODUCT_NAME: &str = "Tidebreak";
 pub const DEV_PRODUCT_NAME: &str = "Tidebreak [dev]";
@@ -17,8 +19,12 @@ pub const PRODUCTION_SCHEME: &str = "tidebreak";
 pub const DEV_SCHEME: &str = "tidebreak-dev";
 pub const STAGING_SCHEME: &str = "tidebreak-staging";
 
-pub const DEV_KEYCHAIN_SERVICE: &str = "tidebreak.dev";
-pub const STAGING_KEYCHAIN_SERVICE: &str = "tidebreak.staging";
+/// Each channel keeps its app profile's credentials under a keychain service
+/// named for its identifier, so no two channels, and no other product that
+/// ran under an earlier identifier, share an item.
+pub const PRODUCTION_KEYCHAIN_SERVICE: &str = "io.github.naingthet.tidebreak";
+pub const DEV_KEYCHAIN_SERVICE: &str = "io.github.naingthet.tidebreak.dev";
+pub const STAGING_KEYCHAIN_SERVICE: &str = "io.github.naingthet.tidebreak.staging";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Channel {
@@ -53,12 +59,11 @@ impl Channel {
     }
 
     /// Keychain service that must not be shared with another channel.
-    /// Production leaves this `None` so the server uses its default.
-    pub const fn keychain_service(self) -> Option<&'static str> {
+    pub const fn keychain_service(self) -> &'static str {
         match self {
-            Self::Production => None,
-            Self::Dev => Some(DEV_KEYCHAIN_SERVICE),
-            Self::Staging => Some(STAGING_KEYCHAIN_SERVICE),
+            Self::Production => PRODUCTION_KEYCHAIN_SERVICE,
+            Self::Dev => DEV_KEYCHAIN_SERVICE,
+            Self::Staging => STAGING_KEYCHAIN_SERVICE,
         }
     }
 
@@ -100,11 +105,25 @@ mod tests {
         assert_eq!(identifiers.len(), unique(identifiers).len());
         assert_eq!(names.len(), unique(names).len());
         assert_eq!(schemes.len(), unique(schemes).len());
-        assert_ne!(
-            Channel::Dev.keychain_service(),
-            Channel::Staging.keychain_service()
-        );
-        assert!(Channel::Production.keychain_service().is_none());
+        let services: Vec<_> = channels.iter().map(|c| c.keychain_service()).collect();
+        assert_eq!(services.len(), unique(services).len());
+    }
+
+    /// Every channel runs under an identifier the move knows the previous
+    /// one for, and keeps its credentials under a service of the same name.
+    #[test]
+    fn each_channel_moves_from_its_previous_identity() {
+        use tidebreak_server::identity_move::identity_change;
+        for (channel, previous) in [
+            (Channel::Production, "io.brightwave.tidebreak"),
+            (Channel::Dev, "io.brightwave.tidebreak.dev"),
+            (Channel::Staging, "io.brightwave.tidebreak.staging"),
+        ] {
+            let change = identity_change(channel.identifier())
+                .unwrap_or_else(|| panic!("{channel:?} has no identity change"));
+            assert_eq!(change.previous_identifier, previous);
+            assert_eq!(channel.keychain_service(), channel.identifier());
+        }
     }
 
     #[test]

@@ -21,7 +21,7 @@ assert.ok(policyMatch, "the native action resolver must use the shared field pol
 assert.ok(actionMatch, "the native action resolver must be present");
 assert.ok(identityStoreMatch, "the native action resolver must use private target identities");
 
-const targetIdentityStoreKey = Symbol.for("io.brightwave.tidebreak.browser.target-identities");
+const targetIdentityStoreKey = Symbol.for("io.github.naingthet.tidebreak.browser.target-identities");
 const targetIdentityStore = new WeakMap();
 const fixtureTargetRefs = new WeakMap();
 Object.defineProperty(globalThis, targetIdentityStoreKey, {

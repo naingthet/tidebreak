@@ -46,10 +46,10 @@ impl ListenEndpoint {
                     "no listen endpoint at {} — is a Tidebreak server running \
                      on this data directory? If the desktop app is already \
                      running, set TIDEBREAK_DATA_DIR to its data directory \
-                     (macOS: ~/Library/Application Support/io.brightwave.tidebreak, \
-                     Linux: ~/.local/share/io.brightwave.tidebreak, \
-                     Windows: %APPDATA%\\io.brightwave.tidebreak; debug builds \
-                     use io.brightwave.tidebreak.dev) and pass --attach. Or \
+                     (macOS: ~/Library/Application Support/io.github.naingthet.tidebreak, \
+                     Linux: ~/.local/share/io.github.naingthet.tidebreak, \
+                     Windows: %APPDATA%\\io.github.naingthet.tidebreak; debug builds \
+                     use io.github.naingthet.tidebreak.dev) and pass --attach. Or \
                      start the desktop app or `tidebreak serve`, or pass \
                      --server <url> with TIDEBREAK_SERVER_TOKEN",
                     path.display()
@@ -241,7 +241,7 @@ mod tests {
         assert!(error.contains("is a Tidebreak server running"));
         assert!(!error.contains("is an Tidebreak"));
         assert!(error.contains("TIDEBREAK_DATA_DIR"));
-        assert!(error.contains("io.brightwave.tidebreak"));
+        assert!(error.contains("io.github.naingthet.tidebreak"));
     }
 
     /// The lock, not the file, says whether a server is running: a file left

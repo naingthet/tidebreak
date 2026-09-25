@@ -9,7 +9,7 @@
 use std::io::{BufRead, BufReader};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[cfg(feature = "keychain")]
 use std::process::Child;
 use std::process::{Command, Output, Stdio};
@@ -179,18 +179,31 @@ impl Scratch {
     /// dev app's folder for a debug build, the released app's otherwise.
     fn app_dir(&self) -> PathBuf {
         let identifier = if cfg!(debug_assertions) {
+            "io.github.naingthet.tidebreak.dev"
+        } else {
+            "io.github.naingthet.tidebreak"
+        };
+        self.data_home().join(identifier)
+    }
+
+    /// Where builds before the app's identity changed kept the same data.
+    fn previous_app_dir(&self) -> PathBuf {
+        let identifier = if cfg!(debug_assertions) {
             "io.brightwave.tidebreak.dev"
         } else {
             "io.brightwave.tidebreak"
         };
-        let data = if cfg!(target_os = "macos") {
+        self.data_home().join(identifier)
+    }
+
+    fn data_home(&self) -> PathBuf {
+        if cfg!(target_os = "macos") {
             self.home.join("Library").join("Application Support")
         } else if cfg!(windows) {
             self.home.join("AppData").join("Roaming")
         } else {
             self.home.join(".local").join("share")
-        };
-        data.join(identifier)
+        }
     }
 
     /// `tidebreak`, run from the project folder with the scratch home, no data
@@ -204,6 +217,8 @@ impl Scratch {
             .env("USERPROFILE", &self.home)
             .env("XDG_DATA_HOME", self.home.join(".local").join("share"))
             .env("APPDATA", self.home.join("AppData").join("Roaming"))
+            .env("LOCALAPPDATA", self.home.join("AppData").join("Local"))
+            .env("XDG_CONFIG_HOME", self.home.join(".config"))
             .env("TIDEBREAK_KEYCHAIN_MOCK", "1")
             .env_remove("TIDEBREAK_DATA_DIR")
             .env_remove("TIDEBREAK_PROFILE")
@@ -220,27 +235,13 @@ impl Scratch {
     /// Publish a `listen.json` in the app's data folder, the way the app does
     /// when it starts.
     fn publish_app_endpoint(&self, base_url: &str, token: &str) {
-        let dir = self.app_dir();
-        std::fs::create_dir_all(&dir).unwrap();
-        let import_token = ["fixture", "import"].join("-");
-        let endpoint = serde_json::json!({
-            "base_url": base_url,
-            "token": token,
-            "local_import_token": import_token,
-        });
-        std::fs::write(dir.join("listen.json"), endpoint.to_string()).unwrap();
+        publish_endpoint(&self.app_dir(), base_url, token);
     }
 
     /// Hold the app's data directory lock the way the running app does. The
     /// lock is released when the returned file is dropped.
     fn hold_app_lock(&self) -> std::fs::File {
-        let dir = self.app_dir();
-        std::fs::create_dir_all(&dir).unwrap();
-        let lock =
-            std::fs::File::create(tidebreak_server::listen_endpoint::instance_lock_path(&dir))
-                .unwrap();
-        lock.lock().unwrap();
-        lock
+        hold_lock(&self.app_dir())
     }
 
     /// Nothing was written into the folder the command ran from.
@@ -254,6 +255,28 @@ impl Scratch {
             "the command wrote into the folder it ran from: {entries:?}"
         );
     }
+}
+
+/// Publish a `listen.json` in `dir`, the way the app does when it starts.
+fn publish_endpoint(dir: &Path, base_url: &str, token: &str) {
+    std::fs::create_dir_all(dir).unwrap();
+    let import_token = ["fixture", "import"].join("-");
+    let endpoint = serde_json::json!({
+        "base_url": base_url,
+        "token": token,
+        "local_import_token": import_token,
+    });
+    std::fs::write(dir.join("listen.json"), endpoint.to_string()).unwrap();
+}
+
+/// Hold `dir`'s instance lock the way a running app does. The lock is
+/// released when the returned file is dropped.
+fn hold_lock(dir: &Path) -> std::fs::File {
+    std::fs::create_dir_all(dir).unwrap();
+    let lock =
+        std::fs::File::create(tidebreak_server::listen_endpoint::instance_lock_path(dir)).unwrap();
+    lock.lock().unwrap();
+    lock
 }
 
 /// A made-up bearer. Built from pieces so nothing here reads as a credential.
@@ -751,6 +774,71 @@ fn serve_removes_its_listen_file_when_stopped() {
         "serve released the data directory"
     );
     drop(lines);
+}
+
+/// A command that uses the app's data moves it from the folder builds
+/// before the identity change kept it in, the way the app does at launch,
+/// and then works on it there.
+#[cfg(feature = "keychain")]
+#[test]
+fn a_command_moves_the_previous_app_data_before_it_uses_it() {
+    let scratch = Scratch::new();
+    let previous = scratch.previous_app_dir();
+    std::fs::create_dir_all(previous.join("logs")).unwrap();
+    std::fs::write(previous.join("logs").join("kept.log"), b"a log line\n").unwrap();
+
+    let created = output_within(
+        scratch
+            .tidebreak()
+            .args(["--embed", "chat", "create", "--output-format", "json"]),
+        COMMAND_LIMIT,
+    );
+    let stderr = String::from_utf8_lossy(&created.stderr);
+    assert!(created.status.success(), "{stderr}");
+    assert!(stderr.contains("moved"), "the move is announced: {stderr}");
+    assert!(
+        tidebreak_server::identity_move::links_to(&previous, &scratch.app_dir()),
+        "the previous folder moved, and its old path links to the new one"
+    );
+    assert_eq!(
+        std::fs::read(scratch.app_dir().join("logs").join("kept.log")).unwrap(),
+        b"a log line\n"
+    );
+    assert!(scratch.app_dir().join("tidebreak.db").is_file());
+    assert!(scratch.app_dir().join("identity-move.json").is_file());
+    scratch.assert_project_untouched();
+}
+
+/// While an older build still runs on the previous folder, nothing moves:
+/// a client command connects to that app where it is, as it did before.
+#[test]
+fn a_client_command_attaches_to_an_older_build_that_is_still_running() {
+    let scratch = Scratch::new();
+    let previous = scratch.previous_app_dir();
+    let _lock = hold_lock(&previous);
+    let app = FakeApp::start(Answers::AsTidebreak);
+    publish_endpoint(&previous, &app.base_url, &fixture_token());
+
+    let output = output_within(
+        scratch
+            .tidebreak()
+            .args(["chat", "list", "--output-format", "json"]),
+        COMMAND_LIMIT,
+    );
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        app.requests()
+            .iter()
+            .any(|head| head.starts_with("GET /chats ")),
+        "the command reached the running app"
+    );
+    assert!(previous.join("listen.json").is_file(), "nothing moved");
+    assert!(!scratch.app_dir().exists(), "nothing new was started");
+    scratch.assert_project_untouched();
 }
 
 /// `--embed` opens the app's data in this process while the app is closed,
