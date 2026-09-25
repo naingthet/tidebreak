@@ -112,3 +112,4 @@
 0101  0101-work-chats-rerun-and-branch-turns.md
 0102  0102-self-host-secrets-in-the-database.md
 0103  0103-tidebreak-runs-under-its-own-app-identity.md
+0104  0104-self-host-members-sign-in-and-work-as-themselves.md
