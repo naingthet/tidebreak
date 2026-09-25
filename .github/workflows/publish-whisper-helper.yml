@@ -112,10 +112,14 @@ jobs:
             exit 1
           fi
           clang_cl="$(cygpath -m "$clang_cl")"
+          # clang-cl takes its MSVC options with a dash as well as a slash.
+          # Git Bash rewrites an environment value that starts with a slash
+          # into a Windows path before cargo sees it, so `/EHsc` would reach
+          # the compiler as `C:/Program Files/Git/EHsc`.
           {
             echo "CC=$clang_cl"
             echo "CXX=$clang_cl"
-            echo "CXXFLAGS=/EHsc"
+            echo "CXXFLAGS=-EHsc"
             echo "CMAKE_GENERATOR=Ninja"
             echo "CMAKE_C_COMPILER=$clang_cl"
             echo "CMAKE_CXX_COMPILER=$clang_cl"
