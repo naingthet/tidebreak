@@ -42,7 +42,7 @@ cap-std.workspace = true
 # folders from, resolved the same way before the app is built, so the move
 # from the previous app identity lands where Tauri then looks. Already in
 # Cargo.lock through Tauri.
-dirs = "=6.0.0"
+dirs = "=7.0.0"
 futures.workspace = true
 flate2 = "=1.1.10"
 minisign-verify.workspace = true
