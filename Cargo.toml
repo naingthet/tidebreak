@@ -65,7 +65,7 @@ cap-std = "=4.0.3"
 cap-fs-ext = "=4.0.3"
 futures = "=0.3.34"
 futures-timer = "=3.0.4"
-thiserror = "=2.0.20"
+thiserror = "=2.0.21"
 uuid = { version = "=1.26.1", features = ["v4", "serde"] }
 unicode-general-category = "=1.1.0"
 unicode-normalization = "=0.1.25"
@@ -82,8 +82,8 @@ chrono = { version = "=0.4.45", features = ["serde"] }
 # pinned by a test rather than left to coincidence.
 ts-rs = { version = "=12.0.1", features = ["chrono-impl", "uuid-impl", "no-serde-warnings"] }
 windows-sys = "=0.61.2"
-sea-orm = { version = "=2.0.3", default-features = false, features = ["macros", "runtime-tokio-rustls", "with-uuid", "with-chrono", "with-json"] }
-sea-orm-migration = { version = "=2.0.3", default-features = false, features = ["runtime-tokio-rustls"] }
+sea-orm = { version = "=2.0.4", default-features = false, features = ["macros", "runtime-tokio-rustls", "with-uuid", "with-chrono", "with-json"] }
+sea-orm-migration = { version = "=2.0.4", default-features = false, features = ["runtime-tokio-rustls"] }
 # One unified feature set for every build selection, so `-p` builds, the
 # `--workspace` lanes, and the release sidecar/desktop builds all share the
 # same compiled tokio (and everything above it) instead of resolving
